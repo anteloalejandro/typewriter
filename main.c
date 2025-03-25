@@ -21,6 +21,14 @@ typedef struct {
     int size;
 } Line;
 
+struct FontData {
+    Font font;
+    int fontSize;
+    float spacing;
+    float lineSpacing;
+    float charWidth;
+} fontData;
+
 void Line_appendChar(Line *line, char c) {
     line->str = realloc(line->str, ++line->size);
     line->str[line->size-1] = c;
@@ -33,15 +41,24 @@ void Line_appendStr(Line *line, char *str, int length) {
 }
 
 // works for either height and width
-int textSize(int n, int charSize, float spacing) {
+enum Orientation {ROWS, COLS};
+int textSize(int n, enum Orientation orientation) {
+    int charSize, spacing;
+    if (orientation == ROWS) {
+        charSize = fontData.fontSize;
+        spacing = fontData.lineSpacing;
+    } else {
+        charSize = fontData.charWidth;
+        spacing = fontData.spacing;
+    }
     if (n == 0) return 0;
     if (n == 1) return charSize + spacing;
 
     return n * (charSize + spacing);
 }
 
-bool fitsInRect(int nChars, int charWidth, int spacing, int padding, Rectangle rect) {
-    return textSize(nChars, charWidth, spacing) + charWidth + spacing < rect.width-padding*2;
+bool fitsInRect(int nChars, int padding, Rectangle rect) {
+    return textSize(nChars, COLS) + fontData.charWidth + fontData.spacing < rect.width-padding*2;
 }
 
 void Line_destroy(Line *line) {
@@ -69,7 +86,6 @@ void Text_appendEmptyLine(Text *text) {
 void Text_destroy(Text *text) {
     for (int i = 0; i < text->rows; i++) {
         Line_destroy(&text->lines[i]);
-        printf("a");
     }
     free(text->lines);
 }
@@ -79,6 +95,15 @@ int MeasureChar(Font font, char c, int fontSize, int spacing) {
     return MeasureTextEx(font, buf, fontSize, spacing).x;
 }
 
+void setFont(char *filename, int fontSize) {
+    fontData.fontSize = fontSize;
+    fontData.font = LoadFontEx(filename, fontData.fontSize, 0, 250);
+    // spacing = fontSize/defaultFontSize;
+    fontData.spacing = 0;
+    fontData.charWidth = MeasureChar(fontData.font, 'M', fontData.fontSize, fontData.spacing);
+    fontData.lineSpacing = 0.5*fontData.fontSize; // 0.5 of height added to the linejump
+}
+
 int main()
 {
     const int screenWidth = 800;
@@ -86,31 +111,27 @@ int main()
     InitWindow(screenWidth, screenHeight, "Typewriter");
     SetTargetFPS(60);
 
-    const int fontSize = 20; // if using the default font, should be a multiple of 10
-    Font font = LoadFontEx("resources/UbuntuMono-R.ttf", fontSize, 0, 250);
-    // spacing = fontSize/defaultFontSize;
-    const int spacing = 0;
-    const int charWidth = MeasureChar(font, 'M', fontSize, spacing);
-    const float lineSpacing = 0.5*fontSize; // 0.5 of height added to the linejump
+    setFont("resources/UbuntuMono-R.ttf", 20);
 
     const int margin = 20;
     const int padding = 5;
     const int border = 5;
+    const int baseY = 100;
     Rectangle container = (Rectangle) {
-       .width = 500, .height = fontSize+padding*2, .y = margin
+       .width = 500, .height = fontData.fontSize+padding*2, .y = baseY
     };
     container.x = (screenWidth-container.width-margin*2)/(float)2 + margin;
 
     Position cursorPos = (Position) {0, 0};
     Rectangle cursor = (Rectangle) {
-        .width = charWidth,
-        .height = fontSize,
+        .width = fontData.charWidth,
+        .height = fontData.fontSize,
         .x = container.x + padding,
         .y = container.y + padding
     };
 
     Text text = (Text) {
-        NULL, .rows = 0, .cols = (container.width-padding*2)/charWidth
+        NULL, .rows = 0, .cols = (container.width-padding*2)/fontData.charWidth
     };
     Text_appendEmptyLine(&text);
 
@@ -119,12 +140,12 @@ int main()
         Line *line = text.lines + cursorPos.y;
         int key;
         while ((key = GetCharPressed()) > 0) {
-            if ((key >= 33) && (key <= 125) && fitsInRect(cursorPos.x, charWidth, spacing, padding, container)) {
+            if ((key >= 33) && (key <= 125) && fitsInRect(cursorPos.x, padding, container)) {
                 line->str[cursorPos.x++] = key;
             }
         }
 
-        if (IsKeyPressed(KEY_SPACE) && fitsInRect(cursorPos.x, charWidth, spacing, padding, container)) {
+        if (IsKeyPressed(KEY_SPACE) && fitsInRect(cursorPos.x, padding, container)) {
             cursorPos.x++;
         }
         if (IsKeyPressed(KEY_BACKSPACE)) {
@@ -147,9 +168,9 @@ int main()
             }
         }
 
-        cursor.x = container.x + padding + textSize(cursorPos.x, charWidth, spacing);
-        cursor.y = container.y + padding + textSize(cursorPos.y, fontSize, lineSpacing);
-        container.height = textSize(text.rows, fontSize, lineSpacing) + padding*2 - lineSpacing;
+        cursor.x = container.x + padding + textSize(cursorPos.x, COLS);
+        cursor.y = container.y + padding + textSize(cursorPos.y, ROWS);
+        container.height = textSize(text.rows, ROWS) + padding*2 - fontData.lineSpacing;
 
         BeginDrawing();
         {
@@ -158,17 +179,21 @@ int main()
             DrawRectangleRec(container, WHITE);
             DrawRectangleRec(cursor, LIGHTGRAY);
             for (int i = 0; i < text.rows; i++) {
-                const Vector2 textPos = Vector2Add(VECTOR2_RECT_PAD(container, padding), (Vector2) {0, textSize(i, fontSize, lineSpacing)});
-                DrawTextEx(font, text.lines[i].str, textPos, font.baseSize, spacing, BLACK);
+                const Vector2 textPos = Vector2Add(VECTOR2_RECT_PAD(container, padding), (Vector2) {0, textSize(i, COLS)});
+                DrawTextEx(fontData.font, text.lines[i].str, textPos, fontData.fontSize, fontData.spacing, BLACK);
             }
 
             DrawText("CORRECTOR: CTRL+RETURN\nCR: HOME", container.x, screenHeight-50, 20, BLACK);
+
+            int height = baseY;
+            DrawLine(0, height, screenWidth, height, BLUE);
+            DrawText("baseY", margin, height, 10, BLUE);
         }
         EndDrawing();
     }
 
     Text_destroy(&text);
-    UnloadFont(font);
+    UnloadFont(fontData.font);
     CloseWindow();
     return 0;
 }
