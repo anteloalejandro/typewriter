@@ -18,6 +18,7 @@ Made with raylib and raygui.
   - [ ] Carriage Return key (which one?)
   - [ ] Key to delete text as if the typewritter had a type with corrector fluid. Deleting won't be visually perfect and may take multiple keystrokes
   - [ ] Allow writing multiple characters in the same area, one over another
+  - [ ] Drag the page up with the mouse to move the cursor up
 - [ ] **Style**
   - [ ] Satisfying sound effects and animations
   - [ ] Multiple "typewritters" (different fonts and UI)

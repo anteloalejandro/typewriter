@@ -44,10 +44,8 @@ bool fitsInRect(int nChars, int charWidth, int spacing, int padding, Rectangle r
     return textSize(nChars, charWidth, spacing) + charWidth + spacing < rect.width-padding*2;
 }
 
-void Line_destroy(Line **line) {
-    free((*line)->str);
-    free(*line);
-    *line = NULL;
+void Line_destroy(Line *line) {
+    free(line->str);
 }
 
 typedef struct {
@@ -61,21 +59,19 @@ void Text_appendLine(Text *text, Line *line) {
 }
 
 void Text_appendEmptyLine(Text *text) {
-    Line *line = malloc(sizeof(Line));
-    line->str = NULL;
-    line->size = 0;
+    Line line = {NULL, 0};
     char buf[text->cols];
     snprintf(buf, text->cols, "%*s", text->cols, "");
-    Line_appendStr(line, buf, text->cols);
-    Text_appendLine(text, line);
+    Line_appendStr(&line, buf, text->cols);
+    Text_appendLine(text, &line);
 }
 
-void Text_destroy(Text **text) {
-    for (int i = 0; (*text)->lines->size; i++) {
-        Line_destroy(&(*text)->lines);
+void Text_destroy(Text *text) {
+    for (int i = 0; i < text->rows; i++) {
+        Line_destroy(&text->lines[i]);
+        printf("a");
     }
-    free((*text)->lines);
-    *text = NULL;
+    free(text->lines);
 }
 
 int MeasureChar(Font font, char c, int fontSize, int spacing) {
@@ -134,10 +130,15 @@ int main()
         if (IsKeyPressed(KEY_BACKSPACE) && cursorPos.x > 0) {
             cursorPos.x--;
         }
+        if (IsKeyPressed(KEY_HOME)) {
+            cursorPos.x = 0;
+        }
+        if (IsKeyPressed(KEY_PAGE_UP)) {
+            cursorPos.y = 0;
+        }
         if (IsKeyPressed(KEY_ENTER)) {
             cursorPos.y++;
             if (cursorPos.y >= text.rows) {
-                printf("append\n");
                 Text_appendEmptyLine(&text);
             }
         }
@@ -160,6 +161,7 @@ int main()
         EndDrawing();
     }
 
+    Text_destroy(&text);
     UnloadFont(font);
     CloseWindow();
     return 0;
