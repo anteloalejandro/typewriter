@@ -113,14 +113,14 @@ int main()
 
     setFont("resources/UbuntuMono-R.ttf", 20);
 
+    const bool move_up_on_newline = false;
     const int margin = 20;
     const int padding = 5;
     const int border = 5;
-    const int baseY = 100;
     Rectangle container = (Rectangle) {
-       .width = 500, .height = fontData.fontSize+padding*2, .y = baseY
+       .width = 500, .height = fontData.fontSize+padding*2, .y = 100
     };
-    container.x = (screenWidth-container.width-margin*2)/(float)2 + margin;
+    container.x = (screenWidth-container.width)/(float)2;
 
     Position cursorPos = (Position) {0, 0};
     Rectangle cursor = (Rectangle) {
@@ -168,9 +168,14 @@ int main()
             }
         }
 
+        const float newHeight = textSize(text.rows, ROWS) + padding*2 - fontData.lineSpacing;
+        if (move_up_on_newline && newHeight != container.height) {
+            container.y -= newHeight - container.height ;
+        }
+        container.height = newHeight;
+
         cursor.x = container.x + padding + textSize(cursorPos.x, COLS);
         cursor.y = container.y + padding + textSize(cursorPos.y, ROWS);
-        container.height = textSize(text.rows, ROWS) + padding*2 - fontData.lineSpacing;
 
         BeginDrawing();
         {
@@ -179,15 +184,16 @@ int main()
             DrawRectangleRec(container, WHITE);
             DrawRectangleRec(cursor, LIGHTGRAY);
             for (int i = 0; i < text.rows; i++) {
-                const Vector2 textPos = Vector2Add(VECTOR2_RECT_PAD(container, padding), (Vector2) {0, textSize(i, COLS)});
+                const Vector2 textPos = Vector2Add(VECTOR2_RECT_PAD(container, padding), (Vector2) {0, textSize(i, ROWS)});
                 DrawTextEx(fontData.font, text.lines[i].str, textPos, fontData.fontSize, fontData.spacing, BLACK);
             }
 
             DrawText("CORRECTOR: CTRL+RETURN\nCR: HOME", container.x, screenHeight-50, 20, BLACK);
 
-            int height = baseY;
-            DrawLine(0, height, screenWidth, height, BLUE);
-            DrawText("baseY", margin, height, 10, BLUE);
+            DrawLine(0, container.y, screenWidth, container.y, BLUE);
+            DrawText("Y", container.x+margin, margin, 10, BLUE);
+            DrawLine(container.x, 0, container.x, screenHeight, BLUE);
+            DrawText("X", margin, container.y+margin, 10, BLUE);
         }
         EndDrawing();
     }
