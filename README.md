@@ -26,4 +26,5 @@ Made with raylib and raygui.
   - [ ] *Typing of the Dead* style minigame
 - [ ] **Extras**
   - [ ] Options to enable features not found in a typewritter or disable some that are (see above)
+  - [ ] Unicode support
   - [ ] Cross-platform
