@@ -127,8 +127,12 @@ int main()
         if (IsKeyPressed(KEY_SPACE) && fitsInRect(cursorPos.x, charWidth, spacing, padding, container)) {
             cursorPos.x++;
         }
-        if (IsKeyPressed(KEY_BACKSPACE) && cursorPos.x > 0) {
-            cursorPos.x--;
+        if (IsKeyPressed(KEY_BACKSPACE)) {
+            if (IsKeyDown(KEY_LEFT_CONTROL)) {
+                line->str[cursorPos.x] = ' ';
+            } else if (cursorPos.x > 0) {
+                cursorPos.x--;
+            }
         }
         if (IsKeyPressed(KEY_HOME)) {
             cursorPos.x = 0;
@@ -157,6 +161,8 @@ int main()
                 const Vector2 textPos = Vector2Add(VECTOR2_RECT_PAD(container, padding), (Vector2) {0, textSize(i, fontSize, lineSpacing)});
                 DrawTextEx(font, text.lines[i].str, textPos, font.baseSize, spacing, BLACK);
             }
+
+            DrawText("CORRECTOR: CTRL+RETURN\nCR: HOME", container.x, screenHeight-50, 20, BLACK);
         }
         EndDrawing();
     }
