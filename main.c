@@ -1,4 +1,5 @@
 #include "raylib/include/raylib.h"
+#include "raylib/include/raymath.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,14 +32,16 @@ void Line_appendStr(Line *line, char *str, int length) {
     line->size += length;
 }
 
-int textWidth(int nChars, int charWidth, int spacing) {
-    int width = nChars * (charWidth + spacing);
-    if (nChars > 1)  width -= spacing;
-    return width;
+// works for either height and width
+int textSize(int n, int charSize, float spacing) {
+    if (n == 0) return 0;
+    if (n == 1) return charSize + spacing;
+
+    return n * (charSize + spacing);
 }
 
 bool fitsInRect(int nChars, int charWidth, int spacing, int padding, Rectangle rect) {
-    return textWidth(nChars, charWidth, spacing) + charWidth + spacing < rect.width-padding*2;
+    return textSize(nChars, charWidth, spacing) + charWidth + spacing < rect.width-padding*2;
 }
 
 void Line_destroy(Line **line) {
@@ -53,7 +56,7 @@ typedef struct {
 } Text;
 
 void Text_appendLine(Text *text, Line *line) {
-    text->lines = realloc(text->lines, sizeof(Line)*text->rows++);
+    text->lines = realloc(text->lines, sizeof(Line) * ++text->rows);
     text->lines[text->rows-1] = *line;
 }
 
@@ -92,6 +95,7 @@ int main()
     // spacing = fontSize/defaultFontSize;
     const int spacing = 0;
     const int charWidth = MeasureChar(font, 'M', fontSize, spacing);
+    const float lineSpacing = 0.5*fontSize; // 0.5 of height added to the linejump
 
     const int margin = 20;
     const int padding = 5;
@@ -116,10 +120,11 @@ int main()
 
     while (!WindowShouldClose())
     {
+        Line *line = text.lines + cursorPos.y;
         int key;
         while ((key = GetCharPressed()) > 0) {
             if ((key >= 33) && (key <= 125) && fitsInRect(cursorPos.x, charWidth, spacing, padding, container)) {
-                text.lines->str[cursorPos.x++] = key;
+                line->str[cursorPos.x++] = key;
             }
         }
 
@@ -129,7 +134,17 @@ int main()
         if (IsKeyPressed(KEY_BACKSPACE) && cursorPos.x > 0) {
             cursorPos.x--;
         }
-        cursor.x = container.x + padding + textWidth(cursorPos.x, charWidth, spacing);
+        if (IsKeyPressed(KEY_ENTER)) {
+            cursorPos.y++;
+            if (cursorPos.y >= text.rows) {
+                printf("append\n");
+                Text_appendEmptyLine(&text);
+            }
+        }
+
+        cursor.x = container.x + padding + textSize(cursorPos.x, charWidth, spacing);
+        cursor.y = container.y + padding + textSize(cursorPos.y, fontSize, lineSpacing);
+        container.height = textSize(text.rows, fontSize, lineSpacing) + padding*2 - lineSpacing;
 
         BeginDrawing();
         {
@@ -137,8 +152,10 @@ int main()
             DrawRectangle(UNPACK_RECT_PAD(container, border), BLACK);
             DrawRectangleRec(container, WHITE);
             DrawRectangleRec(cursor, LIGHTGRAY);
-            DrawTextEx(font, text.lines->str, VECTOR2_RECT_PAD(container, padding), font.baseSize, spacing, BLACK);
-            /* DrawTextBoxed(GetFontDefault(), text, (Rectangle) { UNPACK_RECT_PAD(container, -padding) }, fontSize, spacing, true, BLACK); */
+            for (int i = 0; i < text.rows; i++) {
+                const Vector2 textPos = Vector2Add(VECTOR2_RECT_PAD(container, padding), (Vector2) {0, textSize(i, fontSize, lineSpacing)});
+                DrawTextEx(font, text.lines[i].str, textPos, font.baseSize, spacing, BLACK);
+            }
         }
         EndDrawing();
     }
