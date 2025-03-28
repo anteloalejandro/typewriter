@@ -12,22 +12,44 @@
 #define VECTOR2_RECT(rect) CLITERAL(Vector2) { (rect.x), (rect.y) }
 #define VECTOR2_RECT_PAD(rect, n) CLITERAL(Vector2) { (rect.x) + (n), (rect.y) + (n) }
 
+// TODO: 
+// The cursor will be centered in a point, and cursorPos will be the closes available space in the Text.
+// Typing will make the page itself move, until the end of the page it's reached
+
+// STRUCTS
+struct FontData {
+    Font font;
+    int fontSize;
+    int charWidth;
+    float spacing;
+    float lineSpacing;
+} fontData;
+
 typedef struct {
     int x, y;
 } Position;
 
 typedef struct {
+    int x, y;
+    Vector2 a, b, c;
+} Triangle;
+
+typedef struct {
     char *str;
     int size;
+    Vector2 position;
 } Line;
 
-struct FontData {
-    Font font;
-    int fontSize;
-    float spacing;
-    float lineSpacing;
-    float charWidth;
-} fontData;
+// FUNCTIONS
+
+void DrawTringleTri(Triangle tri, Color color) {
+    DrawTriangle(
+        Vector2Add(tri.a, (Vector2) { tri.x, tri.y }),
+        Vector2Add(tri.b, (Vector2) { tri.x, tri.y }),
+        Vector2Add(tri.c, (Vector2) { tri.x, tri.y }),
+        color
+    );
+}
 
 void Line_appendChar(Line *line, char c) {
     line->str = realloc(line->str, ++line->size);
@@ -40,11 +62,15 @@ void Line_appendStr(Line *line, char *str, int length) {
     line->size += length;
 }
 
+void Line_destroy(Line *line) {
+    free(line->str);
+}
+
 // works for either height and width
-enum Orientation {ROWS, COLS};
+enum Orientation {VERTICAL, HORIZONTAL};
 int textSize(int n, enum Orientation orientation) {
     int charSize, spacing;
-    if (orientation == ROWS) {
+    if (orientation == VERTICAL) {
         charSize = fontData.fontSize;
         spacing = fontData.lineSpacing;
     } else {
@@ -58,36 +84,7 @@ int textSize(int n, enum Orientation orientation) {
 }
 
 bool fitsInRect(int nChars, int padding, Rectangle rect) {
-    return textSize(nChars, COLS) + fontData.charWidth + fontData.spacing < rect.width-padding*2;
-}
-
-void Line_destroy(Line *line) {
-    free(line->str);
-}
-
-typedef struct {
-    Line *lines;
-    int rows, cols;
-} Text;
-
-void Text_appendLine(Text *text, Line *line) {
-    text->lines = realloc(text->lines, sizeof(Line) * ++text->rows);
-    text->lines[text->rows-1] = *line;
-}
-
-void Text_appendEmptyLine(Text *text) {
-    Line line = {NULL, 0};
-    char buf[text->cols];
-    snprintf(buf, text->cols, "%*s", text->cols, "");
-    Line_appendStr(&line, buf, text->cols);
-    Text_appendLine(text, &line);
-}
-
-void Text_destroy(Text *text) {
-    for (int i = 0; i < text->rows; i++) {
-        Line_destroy(&text->lines[i]);
-    }
-    free(text->lines);
+    return textSize(nChars, HORIZONTAL) + fontData.charWidth + fontData.spacing <= rect.width-padding*2;
 }
 
 int MeasureChar(Font font, char c, int fontSize, int spacing) {
@@ -106,38 +103,56 @@ void setFont(char *filename, int fontSize) {
 
 int main()
 {
-    const int screenWidth = 800;
-    const int screenHeight = 400;
+    const int screenWidth = 1200;
+    const int screenHeight = 800;
     InitWindow(screenWidth, screenHeight, "Typewriter");
     SetTargetFPS(60);
 
     setFont("resources/UbuntuMono-R.ttf", 20);
 
-    const bool move_up_on_newline = false;
     const int margin = 20;
     const int padding = 5;
-    const int border = 5;
-    Rectangle container = (Rectangle) {
-       .width = 500, .height = fontData.fontSize+padding*2, .y = 100
-    };
-    container.x = (screenWidth-container.width)/(float)2;
+    const int border = 3;
+    const int rows = 20;
+    const int cols = 80;
 
     Position cursorPos = (Position) {0, 0};
+
     Rectangle cursor = (Rectangle) {
         .width = fontData.charWidth,
         .height = fontData.fontSize,
-        .x = container.x + padding,
-        .y = container.y + padding
+        .x = (screenWidth - fontData.charWidth)/(float)2,
+        .y = (screenHeight - fontData.fontSize)/(float)2
     };
 
-    Text text = (Text) {
-        NULL, .rows = 0, .cols = (container.width-padding*2)/fontData.charWidth
+    Rectangle container = (Rectangle) {
+        .width =  textSize(cols, HORIZONTAL) + padding*2,
+        .height = textSize(rows, VERTICAL),
+        .y = cursor.y - padding,
+        .x = cursor.x - padding 
     };
-    Text_appendEmptyLine(&text);
+
+    Triangle carret = (Triangle) {
+        .x = container.x- border - padding - fontData.fontSize/(float)2,
+        .y = cursor.y,
+        {0, 0}, {0, fontData.fontSize}, {fontData.charWidth, fontData.fontSize/(float)2}
+    };
+
+    Line lines[rows];
+    for (int i = 0; i < rows; i++) {
+        lines[i].str = NULL;
+        lines[i].size = 0;
+        lines[i].position.x = 0;
+        lines[i].position.y = 0;
+
+        char buf[cols+1];
+        snprintf(buf, cols, "%*s", cols, "");
+        Line_appendStr(lines+i, buf, cols);
+    }
 
     while (!WindowShouldClose())
     {
-        Line *line = text.lines + cursorPos.y;
+        Line *line = lines + cursorPos.y;
         int key;
         while ((key = GetCharPressed()) > 0) {
             if ((key >= 33) && (key <= 125) && fitsInRect(cursorPos.x, padding, container)) {
@@ -161,34 +176,26 @@ int main()
         if (IsKeyPressed(KEY_PAGE_UP)) {
             cursorPos.y = 0;
         }
-        if (IsKeyPressed(KEY_ENTER)) {
+        if (IsKeyPressed(KEY_ENTER) && cursorPos.y < rows-1) {
             cursorPos.y++;
-            if (cursorPos.y >= text.rows) {
-                Text_appendEmptyLine(&text);
-            }
         }
 
-        const float newHeight = textSize(text.rows, ROWS) + padding*2 - fontData.lineSpacing;
-        if (move_up_on_newline && newHeight != container.height) {
-            container.y -= newHeight - container.height ;
-        }
-        container.height = newHeight;
-
-        cursor.x = container.x + padding + textSize(cursorPos.x, COLS);
-        cursor.y = container.y + padding + textSize(cursorPos.y, ROWS);
-
+        container.x = (cursor.x - padding) - (textSize(cursorPos.x, HORIZONTAL));
+        container.y = (cursor.y - padding) - (textSize(cursorPos.y, VERTICAL));
+        carret.x = container.x- border - padding - fontData.fontSize/(float)2,
         BeginDrawing();
         {
             ClearBackground(WHITE);
             DrawRectangle(UNPACK_RECT_PAD(container, border), BLACK);
             DrawRectangleRec(container, WHITE);
             DrawRectangleRec(cursor, LIGHTGRAY);
-            for (int i = 0; i < text.rows; i++) {
-                const Vector2 textPos = Vector2Add(VECTOR2_RECT_PAD(container, padding), (Vector2) {0, textSize(i, ROWS)});
-                DrawTextEx(fontData.font, text.lines[i].str, textPos, fontData.fontSize, fontData.spacing, BLACK);
+            DrawTringleTri(carret, RED);
+            for (int i = 0; i < rows; i++) {
+                const Vector2 textPos = Vector2Add(VECTOR2_RECT_PAD(container, padding), (Vector2) {0, textSize(i, VERTICAL)});
+                DrawTextEx(fontData.font, lines[i].str, textPos, fontData.fontSize, fontData.spacing, BLACK);
             }
 
-            DrawText("CORRECTOR: CTRL+RETURN\nCR: HOME", container.x, screenHeight-50, 20, BLACK);
+            DrawText("CORRECTOR: CTRL+RETURN\nCR: HOME", 50, screenHeight-50, 20, BLACK);
 
             DrawLine(0, container.y, screenWidth, container.y, BLUE);
             DrawText("Y", container.x+margin, margin, 10, BLUE);
@@ -198,7 +205,7 @@ int main()
         EndDrawing();
     }
 
-    Text_destroy(&text);
+    for (int i = 0; i < rows; i++) Line_destroy(lines+i);
     UnloadFont(fontData.font);
     CloseWindow();
     return 0;
