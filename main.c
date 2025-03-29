@@ -191,11 +191,16 @@ int main()
             mousePressedMove += GetMouseDelta().x; // multiply by charWidth to match mouse
             if (mousePressedMove > fontData.charWidth || -mousePressedMove > fontData.charWidth) {
                 const int cursorMove = mousePressedMove / fontData.charWidth;
-                int newCursorPos = cursorPos.x - cursorMove;
-                if (newCursorPos < 0) newCursorPos = 0;
-                else if (newCursorPos >= cols) newCursorPos = cols-1;
-                cursorPos.x = newCursorPos;
                 mousePressedMove -= cursorMove * fontData.charWidth;
+                int newCursorPos_x = cursorPos.x - cursorMove;
+                if (newCursorPos_x <= 0) {
+                    newCursorPos_x = 0;
+                    if (cursorPos.y < rows-1 && newCursorPos_x != cursorPos.x)
+                        cursorPos.y++;
+                } else if (newCursorPos_x >= cols) {
+                    newCursorPos_x = cols-1;
+                }
+                cursorPos.x = newCursorPos_x;
             }
         } else {
             mousePressedMove = 0;
