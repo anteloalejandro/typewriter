@@ -11,7 +11,7 @@
     (rect).width + (n)*2, (rect).height + (n)*2
 #define VECTOR2_RECT(rect) CLITERAL(Vector2) { (rect.x), (rect.y) }
 #define VECTOR2_RECT_PAD(rect, n) CLITERAL(Vector2) { (rect.x) + (n), (rect.y) + (n) }
-
+#define TRI_TO_RECT(tri) CLITERAL(Rectangle) {carret.x, carret.y, carret.c.x, carret.b.y}
 // STRUCTS
 struct FontData {
     Font font;
@@ -145,7 +145,6 @@ int main()
 
     while (!WindowShouldClose())
     {
-        static float mousePressedMove = 0;
         Line *line = lines + cursorPos.y;
         int key;
         while ((key = GetCharPressed()) > 0) {
@@ -180,7 +179,10 @@ int main()
         if (cursor.y + moveDelta.y >= padding && cursor.y + moveDelta.y <= screenHeight - padding - fontData.fontSize)
             cursor.y += moveDelta.y;
 
-        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+        static float mousePressedMove = 0;
+        static bool carretPressed = false;
+        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && (carretPressed || CheckCollisionPointRec(GetMousePosition(), TRI_TO_RECT(carret)))) {
+            carretPressed = true;
             mousePressedMove += GetMouseDelta().x; // multiply by charWidth to match mouse
             if (mousePressedMove > fontData.charWidth || -mousePressedMove > fontData.charWidth) {
                 const int cursorMove = mousePressedMove / fontData.charWidth;
@@ -196,6 +198,7 @@ int main()
                 cursorPos.x = newCursorPos_x;
             }
         } else {
+            carretPressed = false;
             mousePressedMove = 0;
         }
 
