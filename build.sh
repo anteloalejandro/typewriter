@@ -2,7 +2,7 @@
 
 cd $(dirname $0)
 
-LIBS="-lGL -lm -lpthread -ldl -lrt -lX11 -Lraylib/include/lib -lraylib"
+LIBS="-lGL -lm -lpthread -ldl -lrt -lX11 -Lraylib/lib -lraylib"
 FILES=$(ls src/*)
 OPTIONS="-Wall -Werror -Wextra $@"
 DEBUG=1
