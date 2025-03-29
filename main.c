@@ -115,6 +115,7 @@ int main()
     const int border = 3;
     const int rows = 20;
     const int cols = 80;
+    const int scrollSpeed = 10;
 
     Position cursorPos = (Position) {0, 0};
 
@@ -133,8 +134,7 @@ int main()
     };
 
     Triangle carret = (Triangle) {
-        .x = container.x- border - padding - fontData.fontSize/(float)2,
-        .y = cursor.y,
+        .x = 0, .y = 0,
         {0, 0}, {0, fontData.fontSize}, {fontData.charWidth, fontData.fontSize/(float)2}
     };
 
@@ -152,6 +152,7 @@ int main()
 
     while (!WindowShouldClose())
     {
+        static float mousePressedMove = 0;
         Line *line = lines + cursorPos.y;
         int key;
         while ((key = GetCharPressed()) > 0) {
@@ -180,9 +181,31 @@ int main()
             cursorPos.y++;
         }
 
+        Vector2 moveDelta = Vector2Multiply(GetMouseWheelMoveV(), (Vector2) {scrollSpeed, scrollSpeed});
+        if (cursor.x + moveDelta.x >= padding && cursor.x + moveDelta.x <= screenWidth - padding - fontData.charWidth)
+            cursor.x += moveDelta.x;
+        if (cursor.y + moveDelta.y >= padding && cursor.y + moveDelta.y <= screenHeight - padding - fontData.fontSize)
+            cursor.y += moveDelta.y;
+
+        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+            mousePressedMove += GetMouseDelta().x; // multiply by charWidth to match mouse
+            if (mousePressedMove > fontData.charWidth || -mousePressedMove > fontData.charWidth) {
+                const int cursorMove = mousePressedMove / fontData.charWidth;
+                int newCursorPos = cursorPos.x - cursorMove;
+                if (newCursorPos < 0) newCursorPos = 0;
+                else if (newCursorPos >= cols) newCursorPos = cols-1;
+                cursorPos.x = newCursorPos;
+                mousePressedMove -= cursorMove * fontData.charWidth;
+            }
+        } else {
+            mousePressedMove = 0;
+        }
+
         container.x = (cursor.x - padding) - (textSize(cursorPos.x, HORIZONTAL));
         container.y = (cursor.y - padding) - (textSize(cursorPos.y, VERTICAL));
-        carret.x = container.x- border - padding - fontData.fontSize/(float)2,
+        carret.x = container.x - border - padding - fontData.fontSize/(float)2,
+        carret.y = cursor.y;
+
         BeginDrawing();
         {
             ClearBackground(WHITE);
