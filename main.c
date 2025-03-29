@@ -12,10 +12,6 @@
 #define VECTOR2_RECT(rect) CLITERAL(Vector2) { (rect.x), (rect.y) }
 #define VECTOR2_RECT_PAD(rect, n) CLITERAL(Vector2) { (rect.x) + (n), (rect.y) + (n) }
 
-// TODO: 
-// The cursor will be centered in a point, and cursorPos will be the closes available space in the Text.
-// Typing will make the page itself move, until the end of the page it's reached
-
 // STRUCTS
 struct FontData {
     Font font;
@@ -37,7 +33,6 @@ typedef struct {
 typedef struct {
     char *str;
     int size;
-    Vector2 position;
 } Line;
 
 // FUNCTIONS
@@ -142,8 +137,6 @@ int main()
     for (int i = 0; i < rows; i++) {
         lines[i].str = NULL;
         lines[i].size = 0;
-        lines[i].position.x = 0;
-        lines[i].position.y = 0;
 
         char buf[cols+1];
         snprintf(buf, cols, "%*s", cols, "");
