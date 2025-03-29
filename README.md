@@ -6,28 +6,6 @@ Made with raylib and raygui.
 
 ## Build
 
-### Install dependencies
-
-You need to install some required libraries; ALSA for audio, Mesa for OpenGL accelerated graphics and X11 for windowing system.
-
-**Ubuntu**
-
-```bash
-sudo apt install libasound2-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev libglu1-mesa-dev libxcursor-dev libxinerama-dev libwayland-dev libxkbcommon-dev
-```
-
-**Fedora**
-
-```bash
-sudo dnf install alsa-lib-devel mesa-libGL-devel libX11-devel libXrandr-devel libXi-devel libXcursor-devel libXinerama-devel libatomic
-```
-
-**Arch Linux***
-
-```bash
-sudo pacman -S alsa-lib mesa libx11 libxrandr libxi libxcursor libxinerama
-```
-
 ### Run build script
 
 ```bash

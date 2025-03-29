@@ -22,10 +22,7 @@
  * Implement DrawTextBoxed from scratch, and delete DrawTextBoxedSelectable
  * as it won't be needed anymore.
  * DrawTextBoxed shouldn't draw a background for the characters, at least not by default.
- * Spacing can be calculated inside the function, so it must be removed from the signature.
- * spacing = fontSize/defaultFontSize, see <https://github.com/raysan5/raylib/blob/f5c96302d5623950dccdca31f8dd66d6d633dbd1/src/rtext.c#L1135>
  * For now, codepoints are optional, ASCII is enough
- * Also, draw with a cursor
  */
 
 static void DrawTextBoxedSelectable(Font font, const char *text, Rectangle rec, float fontSize, float spacing, bool wordWrap, Color tint, int selectStart, int selectLength, Color selectTint, Color selectBackTint);
