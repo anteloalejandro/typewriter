@@ -219,9 +219,9 @@ int main()
             DrawText("CORRECTOR: CTRL+RETURN\nCR: HOME", 50, screenHeight-50, 20, BLACK);
 
             DrawLine(0, container.y, screenWidth, container.y, BLUE);
-            DrawText("Y", container.x+margin, margin, 10, BLUE);
+            DrawText("X", container.x+margin, margin, 10, BLUE);
             DrawLine(container.x, 0, container.x, screenHeight, BLUE);
-            DrawText("X", margin, container.y+margin, 10, BLUE);
+            DrawText("Y", margin, container.y+margin, 10, BLUE);
         }
         EndDrawing();
     }
