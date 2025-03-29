@@ -6,8 +6,38 @@ Made with raylib and raygui.
 
 ## Build
 
+### Install dependencies
+
+You need to install some required libraries; ALSA for audio, Mesa for OpenGL accelerated graphics and X11 for windowing system.
+
+**Ubuntu**
+
+```bash
+sudo apt install libasound2-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev libglu1-mesa-dev libxcursor-dev libxinerama-dev libwayland-dev libxkbcommon-dev
+```
+
+**Fedora**
+
+```bash
+sudo dnf install alsa-lib-devel mesa-libGL-devel libX11-devel libXrandr-devel libXi-devel libXcursor-devel libXinerama-devel libatomic
+```
+
+**Arch Linux***
+
+```bash
+sudo pacman -S alsa-lib mesa libx11 libxrandr libxi libxcursor libxinerama
+```
+
+### Run build script
+
 ```bash
 ./build.sh
+```
+
+### Run executable
+
+```bash
+./bin/main
 ```
 
 ## TODO
@@ -19,10 +49,10 @@ Made with raylib and raygui.
   - [ ] Key to delete text as if the typewritter had a type with corrector fluid.
   Deleting won't be visually perfect and may take multiple keystrokes
   - [ ] Allow writing multiple characters in the same area, one over another
-  - [ ] Move the mouse to drag the page arround, along with the cursor position
-  - [ ] Notify the user when only 10 characters left to hit the margin
+  - [x] Move the mouse to drag the page arround, along with the cursor position
+  - [ ] Notify the user when only 10 characters are left to hit the margin
   - [ ] Add a ruler to set margins
-  - [ ] Move the page around as you write
+  - [x] Move the page around as you write
 - [ ] **Style**
   - [ ] Satisfying sound effects and animations
   - [ ] Multiple "typewritters" (different fonts and UI)
