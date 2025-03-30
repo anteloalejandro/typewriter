@@ -6,6 +6,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+// IMPORT RAYGUI IGNORING ERRORS IN THE HEADER FILE ITSELF
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#define RAYGUI_IMPLEMENTATION
+#include "raylib/include/raygui.h"
+#undef RAYGUI_IMPLEMENTATION
+#pragma GCC diagnostic pop
+
 #define UNPACK_RECT(rect) (rect).x, (rect).y, (rect).width, (rect).height
 #define UNPACK_RECT_PAD(rect, n)                 \
     (rect).x - (n), (rect).y - (n),              \
@@ -13,6 +21,7 @@
 #define VECTOR2_RECT(rect) CLITERAL(Vector2) { (rect.x), (rect.y) }
 #define VECTOR2_RECT_PAD(rect, n) CLITERAL(Vector2) { (rect.x) + (n), (rect.y) + (n) }
 #define TRI_TO_RECT(tri) CLITERAL(Rectangle) {carret.x, carret.y, carret.c.x, carret.b.y}
+
 // STRUCTS
 struct FontData {
     Font font;
@@ -123,12 +132,33 @@ void keyResetFrames(KeyboardKey key) {
     }
 }
 
+int GetForceLayoutKey() {
+    // NOTE: CAPS_LOCK is broken on raylib and will always only be detected as DOWN once pressed,
+    // and there is no way to change it. Thus, proper CAPS_LOCK behaviour cannot be implemented.
+    int key = GetKeyPressed();
+    if (IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT)) {
+        switch (key) {
+            case KEY_SEMICOLON: key = ':'; break;
+            case KEY_SLASH: key = '?'; break;
+            case KEY_COMMA: key = '<'; break;
+            case KEY_PERIOD: key = '>'; break;
+            default: break;
+        }
+    } else {
+        key = tolower(key);
+    }
+    return key;
+}
+
 int main()
 {
     const int screenWidth = 1200;
     const int screenHeight = 800;
     InitWindow(screenWidth, screenHeight, "Typewriter");
     SetTargetFPS(60);
+
+    bool showSettings = false;
+    bool forceLayout = false;
 
     setFont("resources/UbuntuMono-R.ttf", 20);
 
@@ -180,33 +210,35 @@ int main()
 
     while (!WindowShouldClose())
     {
-        Line *line = lines + cursorPos.y;
-        int key = '\0';
-        while ((key = GetCharPressed()) > 0) {
-            if ((key >= 33) && (key <= 125) && fitsInRect(cursorPos.x, padding, container)) {
-                line->str[cursorPos.x++] = key;
+        if (!showSettings) {
+            Line *line = lines + cursorPos.y;
+            int key = '\0';
+            while ((key = (forceLayout ? GetForceLayoutKey() : GetCharPressed())) > 0) {
+                if ((key >= 33) && (key <= 125) && fitsInRect(cursorPos.x, padding, container)) {
+                    line->str[cursorPos.x++] = key;
+                }
+                keyResetFrames(toupper(key));
             }
-            keyResetFrames(toupper(key));
-        }
 
-        if (IsKeyPressed(KEY_SPACE) && fitsInRect(cursorPos.x, padding, container)) {
-            cursorPos.x++;
-        }
-        if (IsKeyPressed(KEY_BACKSPACE)) {
-            if (IsKeyDown(KEY_LEFT_CONTROL)) {
-                line->str[cursorPos.x] = ' ';
-            } else if (cursorPos.x > 0) {
-                cursorPos.x--;
+            if (IsKeyPressed(KEY_SPACE) && fitsInRect(cursorPos.x, padding, container)) {
+                cursorPos.x++;
             }
-        }
-        if (IsKeyPressed(KEY_HOME)) {
-            cursorPos.x = 0;
-        }
-        if (IsKeyPressed(KEY_PAGE_UP)) {
-            cursorPos.y = 0;
-        }
-        if (IsKeyPressed(KEY_ENTER) && cursorPos.y < rows-1) {
-            cursorPos.y++;
+            if (IsKeyPressed(KEY_BACKSPACE)) {
+                if (IsKeyDown(KEY_LEFT_CONTROL)) {
+                    line->str[cursorPos.x] = ' ';
+                } else if (cursorPos.x > 0) {
+                    cursorPos.x--;
+                }
+            }
+            if (IsKeyPressed(KEY_HOME)) {
+                cursorPos.x = 0;
+            }
+            if (IsKeyPressed(KEY_PAGE_UP)) {
+                cursorPos.y = 0;
+            }
+            if (IsKeyPressed(KEY_ENTER) && cursorPos.y < rows-1) {
+                cursorPos.y++;
+            }
         }
 
         Vector2 moveDelta = Vector2Multiply(GetMouseWheelMoveV(), (Vector2) {scrollSpeed, scrollSpeed});
@@ -245,18 +277,18 @@ int main()
 
         BeginDrawing();
         {
-            ClearBackground(WHITE);
-            DrawRectangle(UNPACK_RECT_PAD(container, border), BLACK);
-            DrawRectangleRec(container, WHITE);
-            DrawRectangleRec(cursor, LIGHTGRAY);
-            DrawTringleTri(carret, RED);
+            ClearBackground(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
+            DrawRectangle(UNPACK_RECT_PAD(container, border), GetColor(GuiGetStyle(DEFAULT, showSettings ? BORDER_COLOR_DISABLED : BORDER_COLOR_NORMAL)));
+            DrawRectangleRec(container, GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
+            DrawRectangleRec(cursor, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_DISABLED)));
+            DrawTringleTri(carret, GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_PRESSED)));
             for (int i = 0; i < rows; i++) {
                 const Vector2 textPos = Vector2Add(VECTOR2_RECT_PAD(container, padding), (Vector2) {0, textSize(i, VERTICAL)});
-                DrawTextEx(fontData.font, lines[i].str, textPos, fontData.fontSize, fontData.spacing, BLACK);
+                DrawTextEx(fontData.font, lines[i].str, textPos, fontData.fontSize, fontData.spacing, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_NORMAL)));
             }
 
-            DrawRectangle(0, keyboard.y, screenWidth, keyboard.height, WHITE);
-            DrawRectangleRec(keyboard, LIGHTGRAY);
+            DrawRectangle(0, keyboard.y, screenWidth, keyboard.height, GetColor(GuiGetStyle(DEFAULT, BASE_COLOR_DISABLED)));
+            DrawRectangleRec(keyboard, GetColor(GuiGetStyle(DEFAULT, BASE_COLOR_DISABLED)));
             for (int i = 0; i < 40; i++) {
 
                 int column = i%10;
@@ -271,18 +303,24 @@ int main()
                 const int keyFontSize = keyboardKeyRadius*0.8;
                 const int keyCharWidth = MeasureText(buf, keyFontSize);
 
-                DrawCircleV(center, keyboardKeyRadius, keyboardKeys.frames[i] ? LIGHTGRAY : WHITE);
-                DrawText(buf, center.x - keyCharWidth/(float)2, center.y - keyFontSize/(float)2, keyFontSize, BLACK);
+                DrawCircleV(center, keyboardKeyRadius, keyboardKeys.frames[i] ? GetColor(GuiGetStyle(DEFAULT, BASE_COLOR_DISABLED)) : GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
+                DrawText(buf, center.x - keyCharWidth/(float)2, center.y - keyFontSize/(float)2, keyFontSize, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_NORMAL)));
 
 
-                keyboardKeys.frames[i]--;
-                if (keyboardKeys.frames[i] <= 0) keyboardKeys.frames[i] = 0;
+                keyboardKeys.frames[i] -= keyboardKeys.frames[i] == 0 ? 0 : 1;
             }
 
-            DrawLine(0, container.y, screenWidth, container.y, BLUE);
-            DrawText("X", container.x+margin, margin, 10, BLUE);
-            DrawLine(container.x, 0, container.x, screenHeight, BLUE);
-            DrawText("Y", margin, container.y+margin, 10, BLUE);
+            if (showSettings) {
+                DrawRectangle(screenWidth-220, 0, 220, screenHeight, GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_DISABLED)));
+                GuiToggle((Rectangle) {screenWidth-200, 60, 180, 30}, forceLayout ? "#89# Force Typewriter Layout" : "#80# Force Typewriter Layout", &forceLayout);
+            }
+
+            GuiToggle((Rectangle){screenWidth-padding-30, padding, 30, 30}, "#214#", &showSettings);
+
+            DrawLine(0, container.y, screenWidth, container.y, GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_FOCUSED)));
+            DrawText("X", container.x+margin, margin, 10, GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_FOCUSED)));
+            DrawLine(container.x, 0, container.x, screenHeight, GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_FOCUSED)));
+            DrawText("Y", margin, container.y+margin, 10, GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_FOCUSED)));
         }
         EndDrawing();
     }
