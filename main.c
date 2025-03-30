@@ -1,5 +1,6 @@
 #include "raylib/include/raylib.h"
 #include "raylib/include/raymath.h"
+#include <ctype.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,16 +36,24 @@ typedef struct {
     int size;
 } Line;
 
-// FUNCTIONS
+// STATIC VARIABLES
 
-void DrawTringleTri(Triangle tri, Color color) {
-    DrawTriangle(
-        Vector2Add(tri.a, (Vector2) { tri.x, tri.y }),
-        Vector2Add(tri.b, (Vector2) { tri.x, tri.y }),
-        Vector2Add(tri.c, (Vector2) { tri.x, tri.y }),
-        color
-    );
-}
+static struct {
+    KeyboardKey keys[40];
+    int frames[40];
+    int initialFrames;
+} keyboardKeys = {
+    .keys = {
+        KEY_ONE, KEY_TWO, KEY_THREE, KEY_FOUR, KEY_FIVE, KEY_SIX, KEY_SEVEN, KEY_EIGHT, KEY_NINE, KEY_ZERO, // KEY_KP_SUBTRACT, KEY_KP_EQUAL,
+        KEY_Q, KEY_W, KEY_E, KEY_R, KEY_T, KEY_Y, KEY_U, KEY_I, KEY_O, KEY_P,
+        KEY_A, KEY_S, KEY_D, KEY_F, KEY_G, KEY_H, KEY_J, KEY_K, KEY_L, KEY_SEMICOLON, // KEY_APOSTROPHE,
+        KEY_Z, KEY_X, KEY_C, KEY_V, KEY_B, KEY_N, KEY_M, KEY_COMMA, KEY_PERIOD, KEY_SLASH
+    },
+    .frames = { },
+    .initialFrames = 5
+};
+
+// FUNCTIONS
 
 void Line_appendChar(Line *line, char c) {
     line->str = realloc(line->str, ++line->size);
@@ -59,6 +68,15 @@ void Line_appendStr(Line *line, char *str, int length) {
 
 void Line_destroy(Line *line) {
     free(line->str);
+}
+
+void DrawTringleTri(Triangle tri, Color color) {
+    DrawTriangle(
+        Vector2Add(tri.a, (Vector2) { tri.x, tri.y }),
+        Vector2Add(tri.b, (Vector2) { tri.x, tri.y }),
+        Vector2Add(tri.c, (Vector2) { tri.x, tri.y }),
+        color
+    );
 }
 
 // works for either height and width
@@ -94,6 +112,15 @@ void setFont(char *filename, int fontSize) {
     fontData.spacing = 0;
     fontData.charWidth = MeasureChar(fontData.font, 'M', fontData.fontSize, fontData.spacing);
     fontData.lineSpacing = 0.5*fontData.fontSize; // 0.5 of height added to the linejump
+}
+
+void keyResetFrames(KeyboardKey key) {
+    for(int i = 0; i < (int) sizeof(keyboardKeys.keys); i++) {
+        if (keyboardKeys.keys[i] == key) {
+            keyboardKeys.frames[i] = keyboardKeys.initialFrames;
+            return;
+        }
+    }
 }
 
 int main()
@@ -133,6 +160,14 @@ int main()
         {0, 0}, {0, fontData.fontSize}, {fontData.charWidth, fontData.fontSize/(float)2}
     };
 
+    float keyboardKeyRadius = 40;
+    Rectangle keyboard = (Rectangle) {
+        .height = (keyboardKeyRadius*2 + padding) * 4 + padding,
+        .width = (keyboardKeyRadius*2 + padding) * 10 + padding,
+    };
+    keyboard.x = (screenWidth - keyboard.width)/2;
+    keyboard.y = screenHeight - keyboard.height;
+
     Line lines[rows];
     for (int i = 0; i < rows; i++) {
         lines[i].str = NULL;
@@ -146,11 +181,12 @@ int main()
     while (!WindowShouldClose())
     {
         Line *line = lines + cursorPos.y;
-        int key;
+        int key = '\0';
         while ((key = GetCharPressed()) > 0) {
             if ((key >= 33) && (key <= 125) && fitsInRect(cursorPos.x, padding, container)) {
                 line->str[cursorPos.x++] = key;
             }
+            keyResetFrames(toupper(key));
         }
 
         if (IsKeyPressed(KEY_SPACE) && fitsInRect(cursorPos.x, padding, container)) {
@@ -219,7 +255,29 @@ int main()
                 DrawTextEx(fontData.font, lines[i].str, textPos, fontData.fontSize, fontData.spacing, BLACK);
             }
 
-            DrawText("CORRECTOR: CTRL+RETURN\nCR: HOME", 50, screenHeight-50, 20, BLACK);
+            DrawRectangle(0, keyboard.y, screenWidth, keyboard.height, WHITE);
+            DrawRectangleRec(keyboard, LIGHTGRAY);
+            for (int i = 0; i < 40; i++) {
+
+                int column = i%10;
+                int row = i/10;
+
+                Vector2 center = (Vector2) {
+                    keyboard.x + padding + keyboardKeyRadius + column * (keyboardKeyRadius*2 + padding),
+                    keyboard.y + padding + keyboardKeyRadius + row * (keyboardKeyRadius*2 + padding)
+                };
+                
+                char buf[] = {(char) keyboardKeys.keys[i], '\0'};
+                const int keyFontSize = keyboardKeyRadius*0.8;
+                const int keyCharWidth = MeasureText(buf, keyFontSize);
+
+                DrawCircleV(center, keyboardKeyRadius, keyboardKeys.frames[i] ? LIGHTGRAY : WHITE);
+                DrawText(buf, center.x - keyCharWidth/(float)2, center.y - keyFontSize/(float)2, keyFontSize, BLACK);
+
+
+                keyboardKeys.frames[i]--;
+                if (keyboardKeys.frames[i] <= 0) keyboardKeys.frames[i] = 0;
+            }
 
             DrawLine(0, container.y, screenWidth, container.y, BLUE);
             DrawText("X", container.x+margin, margin, 10, BLUE);
