@@ -21,16 +21,10 @@
 #define VECTOR2_RECT(rect) CLITERAL(Vector2) { (rect.x), (rect.y) }
 #define VECTOR2_RECT_PAD(rect, n) CLITERAL(Vector2) { (rect.x) + (n), (rect.y) + (n) }
 #define TRI_TO_RECT(tri) CLITERAL(Rectangle) {carret.x, carret.y, carret.c.x, carret.b.y}
+#define GUI_COLOR(color) GetColor(GuiGetStyle(DEFAULT, color))
+#define GUI_ICON(icon) "#" #icon "#"
 
 // STRUCTS
-struct FontData {
-    Font font;
-    int fontSize;
-    int charWidth;
-    float spacing;
-    float lineSpacing;
-} fontData;
-
 typedef struct {
     int x, y;
 } Position;
@@ -46,6 +40,14 @@ typedef struct {
 } Line;
 
 // STATIC VARIABLES
+static struct {
+    Font font;
+    int fontSize;
+    int charWidth;
+    float spacing;
+    float lineSpacing;
+} data;
+
 
 static struct {
     KeyboardKey keys[40];
@@ -93,11 +95,11 @@ enum Orientation {VERTICAL, HORIZONTAL};
 int textSize(int n, enum Orientation orientation) {
     int charSize, spacing;
     if (orientation == VERTICAL) {
-        charSize = fontData.fontSize;
-        spacing = fontData.lineSpacing;
+        charSize = data.fontSize;
+        spacing = data.lineSpacing;
     } else {
-        charSize = fontData.charWidth;
-        spacing = fontData.spacing;
+        charSize = data.charWidth;
+        spacing = data.spacing;
     }
     if (n == 0) return 0;
     if (n == 1) return charSize + spacing;
@@ -106,7 +108,7 @@ int textSize(int n, enum Orientation orientation) {
 }
 
 bool fitsInRect(int nChars, int padding, Rectangle rect) {
-    return textSize(nChars, HORIZONTAL) + fontData.charWidth + fontData.spacing <= rect.width-padding*2;
+    return textSize(nChars, HORIZONTAL) + data.charWidth + data.spacing <= rect.width-padding*2;
 }
 
 int MeasureChar(Font font, char c, int fontSize, int spacing) {
@@ -115,12 +117,12 @@ int MeasureChar(Font font, char c, int fontSize, int spacing) {
 }
 
 void setFont(char *filename, int fontSize) {
-    fontData.fontSize = fontSize;
-    fontData.font = LoadFontEx(filename, fontData.fontSize, 0, 250);
+    data.fontSize = fontSize;
+    data.font = LoadFontEx(filename, data.fontSize, 0, 250);
     // spacing = fontSize/defaultFontSize;
-    fontData.spacing = 0;
-    fontData.charWidth = MeasureChar(fontData.font, 'M', fontData.fontSize, fontData.spacing);
-    fontData.lineSpacing = 0.5*fontData.fontSize; // 0.5 of height added to the linejump
+    data.spacing = 0;
+    data.charWidth = MeasureChar(data.font, 'M', data.fontSize, data.spacing);
+    data.lineSpacing = 0.5*data.fontSize; // 0.5 of height added to the linejump
 }
 
 void keyResetFrames(KeyboardKey key) {
@@ -159,6 +161,7 @@ int main()
 
     bool showSettings = false;
     bool forceLayout = false;
+    bool hideKeyboard = false;
 
     setFont("resources/UbuntuMono-R.ttf", 20);
 
@@ -172,10 +175,10 @@ int main()
     Position cursorPos = (Position) {0, 0};
 
     Rectangle cursor = (Rectangle) {
-        .width = fontData.charWidth,
-        .height = fontData.fontSize,
-        .x = (screenWidth - fontData.charWidth)/(float)2,
-        .y = (screenHeight - fontData.fontSize)/(float)2
+        .width = data.charWidth,
+        .height = data.fontSize,
+        .x = (screenWidth - data.charWidth)/(float)2,
+        .y = (screenHeight - data.fontSize)/(float)2
     };
 
     Rectangle container = (Rectangle) {
@@ -187,7 +190,7 @@ int main()
 
     Triangle carret = (Triangle) {
         .x = 0, .y = 0,
-        {0, 0}, {0, fontData.fontSize}, {fontData.charWidth, fontData.fontSize/(float)2}
+        {0, 0}, {0, data.fontSize}, {data.charWidth, data.fontSize/(float)2}
     };
 
     float keyboardKeyRadius = 40;
@@ -242,9 +245,9 @@ int main()
         }
 
         Vector2 moveDelta = Vector2Multiply(GetMouseWheelMoveV(), (Vector2) {scrollSpeed, scrollSpeed});
-        if (cursor.x + moveDelta.x >= padding && cursor.x + moveDelta.x <= screenWidth - padding - fontData.charWidth)
+        if (cursor.x + moveDelta.x >= padding && cursor.x + moveDelta.x <= screenWidth - padding - data.charWidth)
             cursor.x += moveDelta.x;
-        if (cursor.y + moveDelta.y >= padding && cursor.y + moveDelta.y <= screenHeight - padding - fontData.fontSize)
+        if (cursor.y + moveDelta.y >= padding && cursor.y + moveDelta.y <= screenHeight - padding - data.fontSize)
             cursor.y += moveDelta.y;
 
         static float mousePressedMove = 0;
@@ -252,9 +255,9 @@ int main()
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && (carretPressed || CheckCollisionPointRec(GetMousePosition(), TRI_TO_RECT(carret)))) {
             carretPressed = true;
             mousePressedMove += GetMouseDelta().x; // multiply by charWidth to match mouse
-            if (mousePressedMove > fontData.charWidth || -mousePressedMove > fontData.charWidth) {
-                const int cursorMove = mousePressedMove / fontData.charWidth;
-                mousePressedMove -= cursorMove * fontData.charWidth;
+            if (mousePressedMove > data.charWidth || -mousePressedMove > data.charWidth) {
+                const int cursorMove = mousePressedMove / data.charWidth;
+                mousePressedMove -= cursorMove * data.charWidth;
                 int newCursorPos_x = cursorPos.x - cursorMove;
                 if (newCursorPos_x <= 0) {
                     newCursorPos_x = 0;
@@ -272,61 +275,64 @@ int main()
 
         container.x = (cursor.x - padding) - (textSize(cursorPos.x, HORIZONTAL));
         container.y = (cursor.y - padding) - (textSize(cursorPos.y, VERTICAL));
-        carret.x = container.x - border - padding - fontData.fontSize/(float)2,
+        carret.x = container.x - border - padding - data.fontSize/(float)2,
         carret.y = cursor.y;
 
         BeginDrawing();
         {
-            ClearBackground(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
-            DrawRectangle(UNPACK_RECT_PAD(container, border), GetColor(GuiGetStyle(DEFAULT, showSettings ? BORDER_COLOR_DISABLED : BORDER_COLOR_NORMAL)));
-            DrawRectangleRec(container, GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
-            DrawRectangleRec(cursor, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_DISABLED)));
-            DrawTringleTri(carret, GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_PRESSED)));
+            ClearBackground(GUI_COLOR(BACKGROUND_COLOR));
+            DrawRectangle(UNPACK_RECT_PAD(container, border), GUI_COLOR(showSettings ? BORDER_COLOR_DISABLED : BORDER_COLOR_NORMAL));
+            DrawRectangleRec(container, GUI_COLOR(BACKGROUND_COLOR));
+            DrawRectangleRec(cursor, GUI_COLOR(TEXT_COLOR_DISABLED));
+            DrawTringleTri(carret, GUI_COLOR(BORDER_COLOR_PRESSED));
             for (int i = 0; i < rows; i++) {
                 const Vector2 textPos = Vector2Add(VECTOR2_RECT_PAD(container, padding), (Vector2) {0, textSize(i, VERTICAL)});
-                DrawTextEx(fontData.font, lines[i].str, textPos, fontData.fontSize, fontData.spacing, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_NORMAL)));
+                DrawTextEx(data.font, lines[i].str, textPos, data.fontSize, data.spacing, GUI_COLOR(TEXT_COLOR_NORMAL));
             }
 
-            DrawRectangle(0, keyboard.y, screenWidth, keyboard.height, GetColor(GuiGetStyle(DEFAULT, BASE_COLOR_DISABLED)));
-            DrawRectangleRec(keyboard, GetColor(GuiGetStyle(DEFAULT, BASE_COLOR_DISABLED)));
-            for (int i = 0; i < 40; i++) {
+            if (!hideKeyboard) {
+                DrawRectangle(0, keyboard.y, screenWidth, keyboard.height, GUI_COLOR(BASE_COLOR_DISABLED));
+                DrawRectangleRec(keyboard, GUI_COLOR(BASE_COLOR_DISABLED));
+                for (int i = 0; i < 40; i++) {
 
-                int column = i%10;
-                int row = i/10;
+                    int column = i%10;
+                    int row = i/10;
 
-                Vector2 center = (Vector2) {
-                    keyboard.x + padding + keyboardKeyRadius + column * (keyboardKeyRadius*2 + padding),
-                    keyboard.y + padding + keyboardKeyRadius + row * (keyboardKeyRadius*2 + padding)
-                };
-                
-                char buf[] = {(char) keyboardKeys.keys[i], '\0'};
-                const int keyFontSize = keyboardKeyRadius*0.8;
-                const int keyCharWidth = MeasureText(buf, keyFontSize);
+                    Vector2 center = (Vector2) {
+                        keyboard.x + padding + keyboardKeyRadius + column * (keyboardKeyRadius*2 + padding),
+                        keyboard.y + padding + keyboardKeyRadius + row * (keyboardKeyRadius*2 + padding)
+                    };
 
-                DrawCircleV(center, keyboardKeyRadius, keyboardKeys.frames[i] ? GetColor(GuiGetStyle(DEFAULT, BASE_COLOR_DISABLED)) : GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
-                DrawText(buf, center.x - keyCharWidth/(float)2, center.y - keyFontSize/(float)2, keyFontSize, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_NORMAL)));
+                    char buf[] = {(char) keyboardKeys.keys[i], '\0'};
+                    const int keyFontSize = keyboardKeyRadius*0.8;
+                    const int keyCharWidth = MeasureText(buf, keyFontSize);
+
+                    DrawCircleV(center, keyboardKeyRadius, keyboardKeys.frames[i] ? GUI_COLOR(BASE_COLOR_DISABLED) : GUI_COLOR(BACKGROUND_COLOR));
+                    DrawText(buf, center.x - keyCharWidth/(float)2, center.y - keyFontSize/(float)2, keyFontSize, GUI_COLOR(TEXT_COLOR_NORMAL));
 
 
-                keyboardKeys.frames[i] -= keyboardKeys.frames[i] == 0 ? 0 : 1;
+                    keyboardKeys.frames[i] -= keyboardKeys.frames[i] == 0 ? 0 : 1;
+                }
             }
 
             if (showSettings) {
-                DrawRectangle(screenWidth-220, 0, 220, screenHeight, GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_DISABLED)));
-                GuiToggle((Rectangle) {screenWidth-200, 60, 180, 30}, forceLayout ? "#89# Force Typewriter Layout" : "#80# Force Typewriter Layout", &forceLayout);
+                DrawRectangle(screenWidth-220, 0, 220, screenHeight, GUI_COLOR(BORDER_COLOR_DISABLED));
+                GuiToggle((Rectangle) {screenWidth-200, 60, 180, 30}, forceLayout ? GUI_ICON(89) "Force Typewriter Layout" : GUI_ICON(80) "Force Typewriter Layout", &forceLayout);
+                GuiToggle((Rectangle) {screenWidth-200, 100, 180, 30}, hideKeyboard ? GUI_ICON(89) "Hide Keyboard" : GUI_ICON(80) "Hide Keyboard", &hideKeyboard);
             }
 
-            GuiToggle((Rectangle){screenWidth-padding-30, padding, 30, 30}, "#214#", &showSettings);
+            GuiToggle((Rectangle){screenWidth-padding-30, padding, 30, 30}, GUI_ICON(214), &showSettings);
 
-            DrawLine(0, container.y, screenWidth, container.y, GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_FOCUSED)));
-            DrawText("X", container.x+margin, margin, 10, GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_FOCUSED)));
-            DrawLine(container.x, 0, container.x, screenHeight, GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_FOCUSED)));
-            DrawText("Y", margin, container.y+margin, 10, GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_FOCUSED)));
+            DrawLine(0, container.y, screenWidth, container.y, GUI_COLOR(BORDER_COLOR_FOCUSED));
+            DrawText("X", container.x+margin, margin, 10, GUI_COLOR(BORDER_COLOR_FOCUSED));
+            DrawLine(container.x, 0, container.x, screenHeight, GUI_COLOR(BORDER_COLOR_FOCUSED));
+            DrawText("Y", margin, container.y+margin, 10, GUI_COLOR(BORDER_COLOR_FOCUSED));
         }
         EndDrawing();
     }
 
     for (int i = 0; i < rows; i++) Line_destroy(lines+i);
-    UnloadFont(fontData.font);
+    UnloadFont(data.font);
     CloseWindow();
     return 0;
 }
