@@ -23,6 +23,7 @@
 #define TRI_TO_RECT(tri) CLITERAL(Rectangle) {carret.x, carret.y, carret.c.x, carret.b.y}
 #define GUI_COLOR(color) GetColor(GuiGetStyle(DEFAULT, color))
 #define GUI_ICON(icon) "#" #icon "#"
+#define TRANSPARENTIZE(color, alpha) CLITERAL(Color) {color.r, color.g, color.b, alpha}
 
 // STRUCTS
 typedef struct {
@@ -61,15 +62,10 @@ static struct {
         KEY_Z, KEY_X, KEY_C, KEY_V, KEY_B, KEY_N, KEY_M, KEY_COMMA, KEY_PERIOD, KEY_SLASH
     },
     .frames = { },
-    .initialFrames = 5
+    .initialFrames = 10
 };
 
 // FUNCTIONS
-
-void Line_appendChar(Line *line, char c) {
-    line->str = realloc(line->str, ++line->size);
-    line->str[line->size-1] = c;
-}
 
 void Line_appendStr(Line *line, char *str, int length) {
     line->str = realloc(line->str, line->size + length);
@@ -134,7 +130,7 @@ void keyResetFrames(KeyboardKey key) {
     }
 }
 
-int GetForceLayoutKey() {
+int getForceLayoutKey() {
     // NOTE: CAPS_LOCK is broken on raylib and will always only be detected as DOWN once pressed,
     // and there is no way to change it. Thus, proper CAPS_LOCK behaviour cannot be implemented.
     int key = GetKeyPressed();
@@ -216,7 +212,7 @@ int main()
         if (!showSettings) {
             Line *line = lines + cursorPos.y;
             int key = '\0';
-            while ((key = (forceLayout ? GetForceLayoutKey() : GetCharPressed())) > 0) {
+            while ((key = (forceLayout ? getForceLayoutKey() : GetCharPressed())) > 0) {
                 if ((key >= 33) && (key <= 125) && fitsInRect(cursorPos.x, padding, container)) {
                     line->str[cursorPos.x++] = key;
                 }
@@ -307,7 +303,8 @@ int main()
                     const int keyFontSize = keyboardKeyRadius*0.8;
                     const int keyCharWidth = MeasureText(buf, keyFontSize);
 
-                    DrawCircleV(center, keyboardKeyRadius, keyboardKeys.frames[i] ? GUI_COLOR(BASE_COLOR_DISABLED) : GUI_COLOR(BACKGROUND_COLOR));
+                    if (keyboardKeys.frames[i]/(float)keyboardKeys.initialFrames > 0) printf("%.2f\n", Lerp(0, 255, keyboardKeys.frames[i]/(float)keyboardKeys.initialFrames));
+                    DrawCircleV(center, keyboardKeyRadius, TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - Lerp(0, 255, keyboardKeys.frames[i]/(float)keyboardKeys.initialFrames)));
                     DrawText(buf, center.x - keyCharWidth/(float)2, center.y - keyFontSize/(float)2, keyFontSize, GUI_COLOR(TEXT_COLOR_NORMAL));
 
 
