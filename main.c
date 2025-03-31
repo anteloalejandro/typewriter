@@ -105,7 +105,7 @@ void MistakeList_insert(MistakeList *list, char c, Position position) {
 
     mistake->c = c;
     mistake->position = position;
-    mistake->permanence = 3;
+    mistake->permanence = GetRandomValue(2, 5);
     mistake->visibility = mistake->permanence;
 
     node->mistake = mistake;
@@ -127,7 +127,6 @@ void printList(MistakeList *list) {
 }
 
 void MistakeList_eraseAll(MistakeList *list, Position position) {
-    printList(list);
     if (list->head == NULL) return;
     MistakeNode *prev = NULL, *node = list->head;
     while (node != NULL) {
@@ -149,6 +148,7 @@ void MistakeList_eraseAll(MistakeList *list, Position position) {
             node = node->next;
         }
     }
+    printList(list);
 }
 
 void MistakeList_destroy(MistakeList *list) {
@@ -302,6 +302,9 @@ int main()
             int key = '\0';
             while ((key = (forceLayout ? getForceLayoutKey() : GetCharPressed())) > 0) {
                 if ((key >= 33) && (key <= 125) && fitsInRect(cursorPos.x, padding, container)) {
+                    if (line->str[cursorPos.x] != ' ') {
+                        MistakeList_insert(&mistakes, line->str[cursorPos.x], cursorPos);
+                    }
                     line->str[cursorPos.x++] = key;
                 }
                 keyResetFrames(toupper(key));
