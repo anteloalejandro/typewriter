@@ -24,9 +24,9 @@ Made with raylib and raygui.
   - [x] Tabs, space and backspace only move the cursor
   - [x] Enter jumps to a new line, but it does not act like a CR
   - [x] Carriage Return key
-  - [ ] Key to delete text as if the typewritter had a type with corrector fluid.
+  - [x] Key to delete text as if the typewritter had a type with corrector fluid.
   Deleting won't be visually perfect and may take multiple keystrokes
-  - [ ] Allow writing multiple characters in the same area, one over another
+  - [x] Allow writing multiple characters in the same area, one over another
   - [x] Move the mouse to drag the page arround, along with the cursor position
   - [ ] Notify the user when only 10 characters are left to hit the margin
   - [ ] Add a ruler to set margins

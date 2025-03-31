@@ -40,6 +40,14 @@ typedef struct {
     int size;
 } Line;
 
+// TODO: Use a better data structure that allows deletion, like a linked list
+typedef struct {
+    char c;
+    int permanence;
+    int visibility;
+    Position position;
+} Mistake;
+
 // STATIC VARIABLES
 static struct {
     Font font;
@@ -75,6 +83,37 @@ void Line_appendStr(Line *line, char *str, int length) {
 
 void Line_destroy(Line *line) {
     free(line->str);
+}
+
+void Mistake_append(Mistake **mistakes, int length, char c, Position position) {
+    *mistakes = realloc(*mistakes, sizeof(Mistake) * (length+1));
+    (*mistakes)[length].c = c;
+    (*mistakes)[length].permanence = 3; // TODO: Make it random within a range
+    (*mistakes)[length].visibility = (*mistakes)[length].permanence;
+    (*mistakes)[length].position = position;
+}
+
+int Mistake_find(Mistake *mistakes, int length, char c, Position position) {
+    for (int i = 0; i < length; i++) {
+        if (mistakes[i].position.x == position.x && mistakes[i].position.y == position.y && mistakes[i].c == c) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+void Mistake_erase(Mistake *mistakes, int length, char c, Position position) {
+    int i = Mistake_find(mistakes, length, c, position);
+    mistakes[i].visibility -= mistakes[i].visibility == 0 ? 0 : 1;
+}
+
+int Mistake_eraseAll(Mistake *mistakes, int length, Position position) {
+    for (int i = 0; i < length; i++) {
+        if (mistakes[i].position.x == position.x && mistakes[i].position.y == position.y) {
+            mistakes[i].visibility -= mistakes[i].visibility == 0 ? 0 : 1;
+        }
+    }
+    return -1;
 }
 
 void DrawTringleTri(Triangle tri, Color color) {
@@ -158,6 +197,7 @@ int main()
     bool showSettings = false;
     bool forceLayout = false;
     bool hideKeyboard = false;
+    bool showMistakes = false;
 
     setFont("resources/UbuntuMono-R.ttf", 20);
 
@@ -207,6 +247,9 @@ int main()
         Line_appendStr(lines+i, buf, cols);
     }
 
+    Mistake *mistakes = NULL;
+    int nMistakes = 0;
+
     while (!WindowShouldClose())
     {
         if (!showSettings) {
@@ -224,7 +267,12 @@ int main()
             }
             if (IsKeyPressed(KEY_BACKSPACE)) {
                 if (IsKeyDown(KEY_LEFT_CONTROL)) {
-                    line->str[cursorPos.x] = ' ';
+                    if (line->str[cursorPos.x] != ' ') {
+                        // FIX: Memory leak, creates memory that won't be freed until the program ends
+                        Mistake_append(&mistakes, nMistakes++, line->str[cursorPos.x], cursorPos);
+                        line->str[cursorPos.x] = ' ';
+                    }
+                    Mistake_eraseAll(mistakes, nMistakes, cursorPos);
                 } else if (cursorPos.x > 0) {
                     cursorPos.x--;
                 }
@@ -281,6 +329,18 @@ int main()
             DrawRectangleRec(container, GUI_COLOR(BACKGROUND_COLOR));
             DrawRectangleRec(cursor, GUI_COLOR(TEXT_COLOR_DISABLED));
             DrawTringleTri(carret, GUI_COLOR(BORDER_COLOR_PRESSED));
+            if (showMistakes) {
+                for (int i = 0; i < nMistakes; i++) {
+                    char buf[2] = {mistakes[i].c, '\0'};
+                    Vector2 pos = {
+                        textSize(mistakes[i].position.x, HORIZONTAL) + container.x + padding,
+                        textSize(mistakes[i].position.y, VERTICAL) + container.y + padding,
+                    };
+
+                    Color color = TRANSPARENTIZE(GUI_COLOR(TEXT_COLOR_NORMAL), Lerp(0, 255, mistakes[i].visibility/(float)mistakes[i].permanence));
+                    DrawTextEx(data.font, buf, pos, data.fontSize, data.spacing, color);
+                }
+            }
             for (int i = 0; i < rows; i++) {
                 const Vector2 textPos = Vector2Add(VECTOR2_RECT_PAD(container, padding), (Vector2) {0, textSize(i, VERTICAL)});
                 DrawTextEx(data.font, lines[i].str, textPos, data.fontSize, data.spacing, GUI_COLOR(TEXT_COLOR_NORMAL));
@@ -290,9 +350,8 @@ int main()
                 DrawRectangle(0, keyboard.y, screenWidth, keyboard.height, GUI_COLOR(BASE_COLOR_DISABLED));
                 DrawRectangleRec(keyboard, GUI_COLOR(BASE_COLOR_DISABLED));
                 for (int i = 0; i < 40; i++) {
-
-                    int column = i%10;
-                    int row = i/10;
+                    const int column = i%10;
+                    const int row = i/10;
 
                     Vector2 center = (Vector2) {
                         keyboard.x + padding + keyboardKeyRadius + column * (keyboardKeyRadius*2 + padding),
@@ -303,7 +362,6 @@ int main()
                     const int keyFontSize = keyboardKeyRadius*0.8;
                     const int keyCharWidth = MeasureText(buf, keyFontSize);
 
-                    if (keyboardKeys.frames[i]/(float)keyboardKeys.initialFrames > 0) printf("%.2f\n", Lerp(0, 255, keyboardKeys.frames[i]/(float)keyboardKeys.initialFrames));
                     DrawCircleV(center, keyboardKeyRadius, TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - Lerp(0, 255, keyboardKeys.frames[i]/(float)keyboardKeys.initialFrames)));
                     DrawText(buf, center.x - keyCharWidth/(float)2, center.y - keyFontSize/(float)2, keyFontSize, GUI_COLOR(TEXT_COLOR_NORMAL));
 
@@ -316,6 +374,7 @@ int main()
                 DrawRectangle(screenWidth-220, 0, 220, screenHeight, GUI_COLOR(BORDER_COLOR_DISABLED));
                 GuiToggle((Rectangle) {screenWidth-200, 60, 180, 30}, forceLayout ? GUI_ICON(89) "Force Typewriter Layout" : GUI_ICON(80) "Force Typewriter Layout", &forceLayout);
                 GuiToggle((Rectangle) {screenWidth-200, 100, 180, 30}, hideKeyboard ? GUI_ICON(89) "Hide Keyboard" : GUI_ICON(80) "Hide Keyboard", &hideKeyboard);
+                GuiToggle((Rectangle) {screenWidth-200, 140, 180, 30}, showMistakes ? GUI_ICON(89) "Show Mistakes" : GUI_ICON(80) "Show Mistakes", &showMistakes);
             }
 
             GuiToggle((Rectangle){screenWidth-padding-30, padding, 30, 30}, GUI_ICON(214), &showSettings);
@@ -329,6 +388,7 @@ int main()
     }
 
     for (int i = 0; i < rows; i++) Line_destroy(lines+i);
+    free(mistakes);
     UnloadFont(data.font);
     CloseWindow();
     return 0;
