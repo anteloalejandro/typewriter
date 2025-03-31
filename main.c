@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 // IMPORT RAYGUI IGNORING ERRORS IN THE HEADER FILE ITSELF
 #pragma GCC diagnostic push
@@ -47,6 +48,14 @@ typedef struct {
     int visibility;
     Position position;
 } Mistake;
+typedef struct MistakeNode {
+    Mistake *mistake;
+    struct MistakeNode *next;
+} MistakeNode;
+typedef struct {
+    MistakeNode *head;
+    int length;
+} MistakeList;
 
 // STATIC VARIABLES
 static struct {
@@ -85,35 +94,70 @@ void Line_destroy(Line *line) {
     free(line->str);
 }
 
-void Mistake_append(Mistake **mistakes, int length, char c, Position position) {
-    *mistakes = realloc(*mistakes, sizeof(Mistake) * (length+1));
-    (*mistakes)[length].c = c;
-    (*mistakes)[length].permanence = 3; // TODO: Make it random within a range
-    (*mistakes)[length].visibility = (*mistakes)[length].permanence;
-    (*mistakes)[length].position = position;
+void Mistake_destroy(MistakeNode *node) {
+    free(node->mistake);
+    free(node);
 }
 
-int Mistake_find(Mistake *mistakes, int length, char c, Position position) {
-    for (int i = 0; i < length; i++) {
-        if (mistakes[i].position.x == position.x && mistakes[i].position.y == position.y && mistakes[i].c == c) {
-            return i;
+void MistakeList_insert(MistakeList *list, char c, Position position) {
+    Mistake *mistake = malloc(sizeof(Mistake));
+    MistakeNode *node = malloc(sizeof(MistakeNode));
+
+    mistake->c = c;
+    mistake->position = position;
+    mistake->permanence = 3;
+    mistake->visibility = mistake->permanence;
+
+    node->mistake = mistake;
+    node->next = list->head;
+    list->head = node;
+
+    list->length++;
+
+}
+
+void printList(MistakeList *list) {
+    MistakeNode *node = list->head;
+    while (node != NULL) {
+        Mistake m = *node->mistake;
+        printf("{ %c, %d, %d, (%d,%d) } -> ", m.c, m.permanence, m.visibility, m.position.x, m.position.y);
+        node = node->next;
+    }
+    printf("NULL\n");
+}
+
+void MistakeList_eraseAll(MistakeList *list, Position position) {
+    printList(list);
+    if (list->head == NULL) return;
+    MistakeNode *prev = NULL, *node = list->head;
+    while (node != NULL) {
+        Mistake *m = node->mistake;
+        if (m->position.x == position.x && m->position.y == position.y) {
+            if (m->visibility <= 1) {
+                MistakeNode *tmp = node;
+                node = node->next;
+                if (prev == NULL) list->head = node;
+                else prev->next = node;
+                Mistake_destroy(tmp);
+            } else {
+                m->visibility--;
+                prev = node;
+                node = node->next;
+            }
+        } else {
+            prev = node;
+            node = node->next;
         }
     }
-    return -1;
 }
 
-void Mistake_erase(Mistake *mistakes, int length, char c, Position position) {
-    int i = Mistake_find(mistakes, length, c, position);
-    mistakes[i].visibility -= mistakes[i].visibility == 0 ? 0 : 1;
-}
-
-int Mistake_eraseAll(Mistake *mistakes, int length, Position position) {
-    for (int i = 0; i < length; i++) {
-        if (mistakes[i].position.x == position.x && mistakes[i].position.y == position.y) {
-            mistakes[i].visibility -= mistakes[i].visibility == 0 ? 0 : 1;
-        }
+void MistakeList_destroy(MistakeList *list) {
+    MistakeNode *node = list->head;
+    while (node != NULL) {
+        MistakeNode *tmp = node;
+        node = node->next;
+        Mistake_destroy(tmp);
     }
-    return -1;
 }
 
 void DrawTringleTri(Triangle tri, Color color) {
@@ -194,10 +238,12 @@ int main()
     InitWindow(screenWidth, screenHeight, "Typewriter");
     SetTargetFPS(60);
 
+    SetRandomSeed(time(NULL));
+
     bool showSettings = false;
     bool forceLayout = false;
     bool hideKeyboard = false;
-    bool showMistakes = false;
+    bool showMistakes = true;
 
     setFont("resources/UbuntuMono-R.ttf", 20);
 
@@ -247,8 +293,7 @@ int main()
         Line_appendStr(lines+i, buf, cols);
     }
 
-    Mistake *mistakes = NULL;
-    int nMistakes = 0;
+    MistakeList mistakes = { NULL, 0 };
 
     while (!WindowShouldClose())
     {
@@ -268,11 +313,10 @@ int main()
             if (IsKeyPressed(KEY_BACKSPACE)) {
                 if (IsKeyDown(KEY_LEFT_CONTROL)) {
                     if (line->str[cursorPos.x] != ' ') {
-                        // FIX: Memory leak, creates memory that won't be freed until the program ends
-                        Mistake_append(&mistakes, nMistakes++, line->str[cursorPos.x], cursorPos);
+                        MistakeList_insert(&mistakes, line->str[cursorPos.x], cursorPos);
                         line->str[cursorPos.x] = ' ';
                     }
-                    Mistake_eraseAll(mistakes, nMistakes, cursorPos);
+                    MistakeList_eraseAll(&mistakes, cursorPos);
                 } else if (cursorPos.x > 0) {
                     cursorPos.x--;
                 }
@@ -330,15 +374,17 @@ int main()
             DrawRectangleRec(cursor, GUI_COLOR(TEXT_COLOR_DISABLED));
             DrawTringleTri(carret, GUI_COLOR(BORDER_COLOR_PRESSED));
             if (showMistakes) {
-                for (int i = 0; i < nMistakes; i++) {
-                    char buf[2] = {mistakes[i].c, '\0'};
+                MistakeNode *node = mistakes.head;
+                while (node != NULL) {
+                    char buf[2] = {node->mistake->c, '\0'};
                     Vector2 pos = {
-                        textSize(mistakes[i].position.x, HORIZONTAL) + container.x + padding,
-                        textSize(mistakes[i].position.y, VERTICAL) + container.y + padding,
+                        textSize(node->mistake->position.x, HORIZONTAL) + container.x + padding,
+                        textSize(node->mistake->position.y, VERTICAL) + container.y + padding,
                     };
 
-                    Color color = TRANSPARENTIZE(GUI_COLOR(TEXT_COLOR_NORMAL), Lerp(0, 255, mistakes[i].visibility/(float)mistakes[i].permanence));
+                    Color color = TRANSPARENTIZE(GUI_COLOR(TEXT_COLOR_NORMAL), Lerp(0, 255, node->mistake->visibility/(float)node->mistake->permanence));
                     DrawTextEx(data.font, buf, pos, data.fontSize, data.spacing, color);
+                    node = node->next;
                 }
             }
             for (int i = 0; i < rows; i++) {
@@ -388,7 +434,7 @@ int main()
     }
 
     for (int i = 0; i < rows; i++) Line_destroy(lines+i);
-    free(mistakes);
+    MistakeList_destroy(&mistakes);
     UnloadFont(data.font);
     CloseWindow();
     return 0;
