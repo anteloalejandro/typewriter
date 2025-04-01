@@ -378,7 +378,8 @@ int main()
                         textSize(node->mistake->position.y, VERTICAL) + container.y + padding,
                     };
 
-                    Color color = TRANSPARENTIZE(GUI_COLOR(TEXT_COLOR_NORMAL), Lerp(0, 255, node->mistake->visibility/(float)node->mistake->permanence));
+                    const unsigned char transparency = Lerp(0, 255, node->mistake->visibility/(float)node->mistake->permanence);
+                    Color color = TRANSPARENTIZE(GUI_COLOR(TEXT_COLOR_NORMAL), transparency);
                     DrawTextEx(data.font, buf, pos, data.fontSize, data.spacing, color);
                     node = node->next;
                 }
@@ -391,11 +392,8 @@ int main()
             {
                 static int frames = 0;
                 const int keyboardFrames = 5;
-                if (hideKeyboard) {
-                    frames++;
-                } else {
-                    frames--;
-                }
+                if (hideKeyboard) frames++;
+                else frames--;
                 frames = Clamp(frames, 0, keyboardFrames);
                 keyboard.y = Lerp(screenHeight-keyboard.height, screenHeight, frames/(float)keyboardFrames);
                 if (!hideKeyboard || frames < keyboardFrames) {
@@ -415,7 +413,8 @@ int main()
                             const int keyFontSize = keyboardKeyRadius*0.67;
                             const int keyCharWidth = MeasureText(buf, keyFontSize);
 
-                            DrawCircleV(center, keyboardKeyRadius, TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - Lerp(0, 255, keyboardKeys.frames[i]/(float)keyboardKeys.initialFrames)));
+                            const unsigned char transparency = Lerp(0, 255, keyboardKeys.frames[i]/(float)keyboardKeys.initialFrames);
+                            DrawCircleV(center, keyboardKeyRadius, TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - transparency));
                             DrawText(buf, center.x - keyCharWidth/(float)2, center.y - keyFontSize/(float)2, keyFontSize, GUI_COLOR(TEXT_COLOR_NORMAL));
 
                             keyboardKeys.frames[i] -= keyboardKeys.frames[i] == 0 ? 0 : 1;
@@ -430,11 +429,8 @@ int main()
                 const int settingsFrames = 10;
                 static int frames = 0;
                 int settingsX = 0;
-                if (showSettings) {
-                    frames++;
-                } else {
-                    frames--;
-                }
+                if (showSettings) frames++;
+                else frames--;
                 frames = Clamp(frames, 0, settingsFrames);
                 settingsX = Lerp(screenWidth, finalSettingsX, frames/(float)settingsFrames);
                 DrawRectangle(settingsX, 0, settingsWidth, screenHeight, GUI_COLOR(BORDER_COLOR_DISABLED));
