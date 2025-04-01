@@ -386,42 +386,54 @@ int main()
                 DrawTextEx(data.font, lines[i].str, textPos, data.fontSize, data.spacing, GUI_COLOR(TEXT_COLOR_NORMAL));
             }
 
-            if (!hideKeyboard) {
-                DrawRectangle(0, keyboard.y, screenWidth, keyboard.height, GUI_COLOR(BASE_COLOR_DISABLED));
-                DrawRectangleRec(keyboard, GUI_COLOR(BASE_COLOR_DISABLED));
-                for (int i = 0; i < 40; i++) {
-                    const int column = i%10;
-                    const int row = i/10;
+            {
+                static int frames = 0;
+                const int keyboardFrames = 5;
+                if (hideKeyboard) {
+                    frames++;
+                } else {
+                    frames--;
+                }
+                frames = Clamp(frames, 0, keyboardFrames);
+                keyboard.y = Lerp(screenHeight-keyboard.height, screenHeight, frames/(float)keyboardFrames);
+                if (!hideKeyboard || frames < keyboardFrames) {
+                    DrawRectangle(0, keyboard.y, screenWidth, keyboard.height, GUI_COLOR(BASE_COLOR_DISABLED));
+                    DrawRectangleRec(keyboard, GUI_COLOR(BASE_COLOR_DISABLED));
+                    for (int i = 0; i < 40; i++) {
+                        const int column = i%10;
+                        const int row = i/10;
 
-                    Vector2 center = (Vector2) {
-                        keyboard.x + padding + keyboardKeyRadius + column * (keyboardKeyRadius*2 + padding),
-                        keyboard.y + padding + keyboardKeyRadius + row * (keyboardKeyRadius*2 + padding)
-                    };
+                        Vector2 center = (Vector2) {
+                            keyboard.x + padding + keyboardKeyRadius + column * (keyboardKeyRadius*2 + padding),
+                            keyboard.y + padding + keyboardKeyRadius + row * (keyboardKeyRadius*2 + padding)
+                        };
 
-                    char buf[] = {(char) keyboardKeys.keys[i], '\0'};
-                    const int keyFontSize = keyboardKeyRadius*0.8;
-                    const int keyCharWidth = MeasureText(buf, keyFontSize);
+                        char buf[] = {(char) keyboardKeys.keys[i], '\0'};
+                        const int keyFontSize = keyboardKeyRadius*0.8;
+                        const int keyCharWidth = MeasureText(buf, keyFontSize);
 
-                    DrawCircleV(center, keyboardKeyRadius, TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - Lerp(0, 255, keyboardKeys.frames[i]/(float)keyboardKeys.initialFrames)));
-                    DrawText(buf, center.x - keyCharWidth/(float)2, center.y - keyFontSize/(float)2, keyFontSize, GUI_COLOR(TEXT_COLOR_NORMAL));
+                        DrawCircleV(center, keyboardKeyRadius, TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - Lerp(0, 255, keyboardKeys.frames[i]/(float)keyboardKeys.initialFrames)));
+                        DrawText(buf, center.x - keyCharWidth/(float)2, center.y - keyFontSize/(float)2, keyFontSize, GUI_COLOR(TEXT_COLOR_NORMAL));
 
 
-                    keyboardKeys.frames[i] -= keyboardKeys.frames[i] == 0 ? 0 : 1;
+                        keyboardKeys.frames[i] -= keyboardKeys.frames[i] == 0 ? 0 : 1;
+                    }
                 }
             }
 
             {
                 const int settingsWidth = 220;
                 const int finalSettingsX = screenWidth-settingsWidth;
-                static int settingsFrames = 0;
+                const int settingsFrames = 10;
+                static int frames = 0;
                 int settingsX = 0;
                 if (showSettings) {
-                    settingsFrames++;
+                    frames++;
                 } else {
-                    settingsFrames--;
+                    frames--;
                 }
-                settingsFrames = Clamp(settingsFrames, 0, 10.0);
-                settingsX = Lerp(screenWidth, finalSettingsX, settingsFrames/10.0);
+                frames = Clamp(frames, 0, settingsFrames);
+                settingsX = Lerp(screenWidth, finalSettingsX, frames/(float)settingsFrames);
                 DrawRectangle(settingsX, 0, settingsWidth, screenHeight, GUI_COLOR(BORDER_COLOR_DISABLED));
                 GuiToggle(
                     (Rectangle) {settingsX+padding, 60, settingsWidth-padding*2, 30},
