@@ -3,7 +3,7 @@
 cd $(dirname $0)
 
 LIBS="-lm -Lraylib/lib -lraylib"
-FILES=$(ls src/*)
+FILES=$(ls src/shared.c)
 OPTIONS="-Wall -Werror -Wextra $@"
 DEBUG=1
 
