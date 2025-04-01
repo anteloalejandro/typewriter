@@ -88,6 +88,15 @@ static struct {
     .initialFrames = 10
 };
 
+static struct {
+    char *name;
+    char *path;
+    int fontSize;
+} fonts[] = {
+    { "Ubuntu Mono", "resources/UbuntuMono-R.ttf", 20 },
+    { "Courier New", "resources/cour.ttf", 20 },
+};
+
 // FUNCTIONS
 
 void Line_appendStr(Line *line, char *str, int length) {
@@ -202,6 +211,7 @@ int MeasureChar(Font font, char c, int fontSize, int spacing) {
 }
 
 void setFont(char *filename, int fontSize) {
+    UnloadFont(data.font);
     data.fontSize = fontSize;
     data.font = LoadFontEx(filename, data.fontSize, 0, 250);
     // spacing = fontSize/defaultFontSize;
@@ -248,7 +258,7 @@ int main()
     int screenWidth = 1200;
     int screenHeight = 800;
     InitWindow(screenWidth, screenHeight, "Typewriter");
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT);
     SetTargetFPS(60);
 
     SetRandomSeed(time(NULL));
@@ -258,7 +268,7 @@ int main()
     bool hideKeyboard = false;
     bool showFloatingChars = false;
 
-    setFont("resources/UbuntuMono-R.ttf", 20);
+    setFont(fonts[0].path, fonts[0].fontSize);
 
     const int margin = 20;
     const int padding = 5;
@@ -457,25 +467,36 @@ int main()
                 frames = Clamp(frames, 0, settingsFrames);
                 settingsX = Lerp(screenWidth, finalSettingsX, frames/(float)settingsFrames);
                 DrawRectangle(settingsX, 0, settingsWidth, screenHeight, GUI_COLOR(BORDER_COLOR_DISABLED));
+                DrawText("General Settings", settingsX+padding, 60, 20, GUI_COLOR(BACKGROUND_COLOR));
                 GuiToggle(
-                    (Rectangle) {settingsX+padding, 60, settingsWidth-padding*2, 30},
+                    (Rectangle) {settingsX+padding, 90, settingsWidth-padding*2, 30},
                     forceLayout ? GUI_ICON(89) "Force Typewriter Layout" : GUI_ICON(80) "Force Typewriter Layout",
                     &forceLayout
                 );
                 GuiToggle(
-                    (Rectangle) {settingsX+padding, 100, settingsWidth-padding*2, 30},
+                    (Rectangle) {settingsX+padding, 130, settingsWidth-padding*2, 30},
                     hideKeyboard ? GUI_ICON(89) "Hide Keyboard" : GUI_ICON(80) "Hide Keyboard",
                     &hideKeyboard
                 );
                 GuiToggle(
-                    (Rectangle) {settingsX+padding, 140, settingsWidth-padding*2, 30},
+                    (Rectangle) {settingsX+padding, 170, settingsWidth-padding*2, 30},
                     showFloatingChars ? GUI_ICON(89) "Enable character overlapping" : GUI_ICON(80) "Enable character overlapping",
                     &showFloatingChars
                 );
-                if (GuiButton((Rectangle) {settingsX+padding, 180, settingsWidth-padding*2, 30}, "Clear Floating Chars")) {
+                if (GuiButton((Rectangle) {settingsX+padding, 210, settingsWidth-padding*2, 30}, "Clear Floating Chars")) {
                     FloatingCharList_destroy(&fchars);
                     fchars.head = NULL; fchars.length = 0;
                 }
+
+                DrawText("Font Settings", settingsX+padding, 260, 20, GUI_COLOR(BACKGROUND_COLOR));
+                static int item = 0;
+                bool fontChanged = GuiDropdownBox(
+                    (Rectangle) {settingsX+padding, 290, settingsWidth-padding*2, 30},
+                    "Modern\nClassic",
+                    &item,
+                    true
+                );
+                if (fontChanged) setFont(fonts[item].path, fonts[item].fontSize);
             }
 
             GuiToggle((Rectangle){screenWidth-padding-30, padding, 30, 30}, showSettings ? GUI_ICON(113) : GUI_ICON(214), &showSettings);
