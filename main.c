@@ -47,15 +47,15 @@ typedef struct {
     int permanence;
     int visibility;
     Position position;
-} Mistake;
-typedef struct MistakeNode {
-    Mistake *mistake;
-    struct MistakeNode *next;
-} MistakeNode;
+} FloatingChar;
+typedef struct FloatingCharNode {
+    FloatingChar *fchar;
+    struct FloatingCharNode *next;
+} FloatingCharNode;
 typedef struct {
-    MistakeNode *head;
+    FloatingCharNode *head;
     int length;
-} MistakeList;
+} FloatingCharList;
 
 // STATIC VARIABLES
 static struct {
@@ -100,21 +100,21 @@ void Line_destroy(Line *line) {
     free(line->str);
 }
 
-void Mistake_destroy(MistakeNode *node) {
-    free(node->mistake);
+void FloatingChar_destroy(FloatingCharNode *node) {
+    free(node->fchar);
     free(node);
 }
 
-void MistakeList_insert(MistakeList *list, char c, Position position) {
-    Mistake *mistake = malloc(sizeof(Mistake));
-    MistakeNode *node = malloc(sizeof(MistakeNode));
+void FloatingCharList_insert(FloatingCharList *list, char c, Position position) {
+    FloatingChar *fchar = malloc(sizeof(FloatingChar));
+    FloatingCharNode *node = malloc(sizeof(FloatingCharNode));
 
-    mistake->c = c;
-    mistake->position = position;
-    mistake->permanence = GetRandomValue(2, 5);
-    mistake->visibility = mistake->permanence;
+    fchar->c = c;
+    fchar->position = position;
+    fchar->permanence = GetRandomValue(2, 5);
+    fchar->visibility = fchar->permanence;
 
-    node->mistake = mistake;
+    node->fchar = fchar;
     node->next = list->head;
     list->head = node;
 
@@ -122,28 +122,28 @@ void MistakeList_insert(MistakeList *list, char c, Position position) {
 
 }
 
-void printList(MistakeList *list) {
-    MistakeNode *node = list->head;
+void printList(FloatingCharList *list) {
+    FloatingCharNode *node = list->head;
     while (node != NULL) {
-        Mistake m = *node->mistake;
+        FloatingChar m = *node->fchar;
         printf("{ %c, %d, %d, (%d,%d) } -> ", m.c, m.permanence, m.visibility, m.position.x, m.position.y);
         node = node->next;
     }
     printf("NULL\n");
 }
 
-void MistakeList_eraseAll(MistakeList *list, Position position) {
+void FloatingCharList_eraseAll(FloatingCharList *list, Position position) {
     if (list->head == NULL) return;
-    MistakeNode *prev = NULL, *node = list->head;
+    FloatingCharNode *prev = NULL, *node = list->head;
     while (node != NULL) {
-        Mistake *m = node->mistake;
+        FloatingChar *m = node->fchar;
         if (m->position.x == position.x && m->position.y == position.y) {
             if (m->visibility <= 1) {
-                MistakeNode *tmp = node;
+                FloatingCharNode *tmp = node;
                 node = node->next;
                 if (prev == NULL) list->head = node;
                 else prev->next = node;
-                Mistake_destroy(tmp);
+                FloatingChar_destroy(tmp);
             } else {
                 m->visibility--;
                 prev = node;
@@ -157,12 +157,12 @@ void MistakeList_eraseAll(MistakeList *list, Position position) {
     printList(list);
 }
 
-void MistakeList_destroy(MistakeList *list) {
-    MistakeNode *node = list->head;
+void FloatingCharList_destroy(FloatingCharList *list) {
+    FloatingCharNode *node = list->head;
     while (node != NULL) {
-        MistakeNode *tmp = node;
+        FloatingCharNode *tmp = node;
         node = node->next;
-        Mistake_destroy(tmp);
+        FloatingChar_destroy(tmp);
     }
 }
 
@@ -245,9 +245,10 @@ int getForceLayoutKey() {
 
 int main()
 {
-    const int screenWidth = 1200;
-    const int screenHeight = 800;
+    int screenWidth = 1200;
+    int screenHeight = 800;
     InitWindow(screenWidth, screenHeight, "Typewriter");
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     SetTargetFPS(60);
 
     SetRandomSeed(time(NULL));
@@ -255,7 +256,7 @@ int main()
     bool showSettings = false;
     bool forceLayout = false;
     bool hideKeyboard = false;
-    bool showMistakes = false;
+    bool showFloatingChars = false;
 
     setFont("resources/UbuntuMono-R.ttf", 20);
 
@@ -292,8 +293,6 @@ int main()
         .height = (keyboardKeyRadius*2 + padding) * 4 + padding,
         .width = (keyboardKeyRadius*2 + padding) * 10 + padding,
     };
-    keyboard.x = (screenWidth - keyboard.width)/2;
-    keyboard.y = screenHeight - keyboard.height;
 
     Line lines[rows];
     for (int i = 0; i < rows; i++) {
@@ -305,17 +304,23 @@ int main()
         Line_appendStr(lines+i, buf, cols);
     }
 
-    MistakeList mistakes = { NULL, 0 };
+    FloatingCharList fchars = { NULL, 0 };
 
     while (!WindowShouldClose())
     {
+        static int prevScreenWidth = 0;
+        static int prevScreenHeight = 0;
+        prevScreenWidth = screenWidth;
+        prevScreenHeight = screenHeight;
+        screenWidth = GetScreenWidth();
+        screenHeight = GetScreenHeight();
         if (!showSettings) {
             Line *line = lines + cursorPos.y;
             int key = '\0';
             while ((key = (forceLayout ? getForceLayoutKey() : GetCharPressed())) > 0) {
                 if ((key >= 33) && (key <= 125) && fitsInRect(cursorPos.x, padding, container)) {
                     if (line->str[cursorPos.x] != ' ') {
-                        MistakeList_insert(&mistakes, line->str[cursorPos.x], cursorPos);
+                        FloatingCharList_insert(&fchars, line->str[cursorPos.x], cursorPos);
                     }
                     line->str[cursorPos.x++] = key;
                 }
@@ -329,10 +334,10 @@ int main()
             if (IsKeyPressed(KEY_BACKSPACE)) {
                 if (IsKeyDown(KEY_LEFT_CONTROL)) {
                     if (line->str[cursorPos.x] != ' ') {
-                        MistakeList_insert(&mistakes, line->str[cursorPos.x], cursorPos);
+                        FloatingCharList_insert(&fchars, line->str[cursorPos.x], cursorPos);
                         line->str[cursorPos.x] = ' ';
                     }
-                    MistakeList_eraseAll(&mistakes, cursorPos);
+                    FloatingCharList_eraseAll(&fchars, cursorPos);
                 } else if (cursorPos.x > 0) {
                     cursorPos.x--;
                 }
@@ -368,10 +373,18 @@ int main()
             mousePressedMove = 0;
         }
 
+        if (prevScreenWidth != screenWidth || prevScreenHeight != screenHeight) {
+            cursor.x += (screenWidth - prevScreenWidth)/2.0;
+            cursor.y += (screenHeight - prevScreenHeight)/2.0;
+        }
+
         container.x = (cursor.x - padding) - (textSize(cursorPos.x, HORIZONTAL));
         container.y = (cursor.y - padding) - (textSize(cursorPos.y, VERTICAL));
         carret.x = container.x - border - padding - data.fontSize/(float)2,
         carret.y = cursor.y;
+
+        keyboard.x = (screenWidth - keyboard.width)/2;
+        keyboard.y = screenHeight - keyboard.height;
 
         BeginDrawing();
         {
@@ -380,16 +393,16 @@ int main()
             DrawRectangleRec(container, GUI_COLOR(BACKGROUND_COLOR));
             DrawRectangleRec(cursor, GUI_COLOR(TEXT_COLOR_DISABLED));
             DrawTringleTri(carret, GUI_COLOR(BORDER_COLOR_PRESSED));
-            if (showMistakes) {
-                MistakeNode *node = mistakes.head;
+            if (showFloatingChars) {
+                FloatingCharNode *node = fchars.head;
                 while (node != NULL) {
-                    char buf[2] = {node->mistake->c, '\0'};
+                    char buf[2] = {node->fchar->c, '\0'};
                     Vector2 pos = {
-                        textSize(node->mistake->position.x, HORIZONTAL) + container.x + padding,
-                        textSize(node->mistake->position.y, VERTICAL) + container.y + padding,
+                        textSize(node->fchar->position.x, HORIZONTAL) + container.x + padding,
+                        textSize(node->fchar->position.y, VERTICAL) + container.y + padding,
                     };
 
-                    const unsigned char transparency = Lerp(0, 255, node->mistake->visibility/(float)node->mistake->permanence);
+                    const unsigned char transparency = Lerp(0, 255, node->fchar->visibility/(float)node->fchar->permanence);
                     Color color = TRANSPARENTIZE(GUI_COLOR(TEXT_COLOR_NORMAL), transparency);
                     DrawTextEx(data.font, buf, pos, data.fontSize, data.spacing, color);
                     node = node->next;
@@ -456,16 +469,16 @@ int main()
                 );
                 GuiToggle(
                     (Rectangle) {settingsX+padding, 140, settingsWidth-padding*2, 30},
-                    showMistakes ? GUI_ICON(89) "Show Mistakes" : GUI_ICON(80) "Show Mistakes",
-                    &showMistakes
+                    showFloatingChars ? GUI_ICON(89) "Enable character overlapping" : GUI_ICON(80) "Enable character overlapping",
+                    &showFloatingChars
                 );
-                if (GuiButton((Rectangle) {settingsX+padding, 180, settingsWidth-padding*2, 30}, "Clear mistakes")) {
-                    MistakeList_destroy(&mistakes);
-                    mistakes.head = NULL; mistakes.length = 0;
+                if (GuiButton((Rectangle) {settingsX+padding, 180, settingsWidth-padding*2, 30}, "Clear Floating Chars")) {
+                    FloatingCharList_destroy(&fchars);
+                    fchars.head = NULL; fchars.length = 0;
                 }
             }
 
-            GuiToggle((Rectangle){screenWidth-padding-30, padding, 30, 30}, GUI_ICON(214), &showSettings);
+            GuiToggle((Rectangle){screenWidth-padding-30, padding, 30, 30}, showSettings ? GUI_ICON(113) : GUI_ICON(214), &showSettings);
 
             DrawLine(0, container.y, screenWidth, container.y, GUI_COLOR(BORDER_COLOR_FOCUSED));
             DrawText("X", container.x+margin, margin, 10, GUI_COLOR(BORDER_COLOR_FOCUSED));
@@ -476,7 +489,7 @@ int main()
     }
 
     for (int i = 0; i < rows; i++) Line_destroy(lines+i);
-    MistakeList_destroy(&mistakes);
+    FloatingCharList_destroy(&fchars);
     UnloadFont(data.font);
     CloseWindow();
     return 0;
