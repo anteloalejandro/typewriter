@@ -28,7 +28,6 @@
 #define GUI_ICON(icon) "#" #icon "#"
 #define TRANSPARENTIZE(color, alpha) CLITERAL(Color) {color.r, color.g, color.b, alpha}
 
-
 int screenWidth = 1200;
 int screenHeight = 800;
 
@@ -45,19 +44,12 @@ const int cols = 80;
 const int scrollSpeed = 10;
 const float keyRadius = 30;
 
-
 Position cursorPos;
-
 Rectangle cursor;
-
 Rectangle container;
-
 Triangle carret;
-
 Rectangle keyboard;
-
 Str *lines = NULL;
-
 FloatingCharList fchars = { NULL, 0 };
 
 void init() {
@@ -332,7 +324,6 @@ int main()
         }
         EndDrawing();
     }
-
 
     closeAndFree();
     CloseWindow();
