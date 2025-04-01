@@ -324,15 +324,6 @@ int main()
                     cursorPos.x--;
                 }
             }
-            if (IsKeyPressed(KEY_HOME)) {
-                cursorPos.x = 0;
-            }
-            if (IsKeyPressed(KEY_PAGE_UP)) {
-                cursorPos.y = 0;
-            }
-            if (IsKeyPressed(KEY_ENTER) && cursorPos.y < rows-1) {
-                cursorPos.y++;
-            }
         }
 
         Vector2 moveDelta = Vector2Multiply(GetMouseWheelMoveV(), (Vector2) {scrollSpeed, scrollSpeed});
