@@ -70,13 +70,15 @@ static struct {
 static struct {
     KeyboardKey keys[40];
     int frames[40];
+    int rowLength[4];
     int initialFrames;
 } keyboardKeys = {
+    .rowLength = { 10, 10, 9, 7 },
     .keys = {
         KEY_ONE, KEY_TWO, KEY_THREE, KEY_FOUR, KEY_FIVE, KEY_SIX, KEY_SEVEN, KEY_EIGHT, KEY_NINE, KEY_ZERO, // KEY_KP_SUBTRACT, KEY_KP_EQUAL,
         KEY_Q, KEY_W, KEY_E, KEY_R, KEY_T, KEY_Y, KEY_U, KEY_I, KEY_O, KEY_P,
-        KEY_A, KEY_S, KEY_D, KEY_F, KEY_G, KEY_H, KEY_J, KEY_K, KEY_L, KEY_SEMICOLON, // KEY_APOSTROPHE,
-        KEY_Z, KEY_X, KEY_C, KEY_V, KEY_B, KEY_N, KEY_M, KEY_COMMA, KEY_PERIOD, KEY_SLASH
+        KEY_A, KEY_S, KEY_D, KEY_F, KEY_G, KEY_H, KEY_J, KEY_K, KEY_L,
+        KEY_Z, KEY_X, KEY_C, KEY_V, KEY_B, KEY_N, KEY_M,
     },
     .frames = { },
     .initialFrames = 10
@@ -275,7 +277,7 @@ int main()
         {0, 0}, {0, data.fontSize}, {data.charWidth, data.fontSize/(float)2}
     };
 
-    float keyboardKeyRadius = 40;
+    float keyboardKeyRadius = 30;
     Rectangle keyboard = (Rectangle) {
         .height = (keyboardKeyRadius*2 + padding) * 4 + padding,
         .width = (keyboardKeyRadius*2 + padding) * 10 + padding,
@@ -399,24 +401,25 @@ int main()
                 if (!hideKeyboard || frames < keyboardFrames) {
                     DrawRectangle(0, keyboard.y, screenWidth, keyboard.height, GUI_COLOR(BASE_COLOR_DISABLED));
                     DrawRectangleRec(keyboard, GUI_COLOR(BASE_COLOR_DISABLED));
-                    for (int i = 0; i < 40; i++) {
-                        const int column = i%10;
-                        const int row = i/10;
+                    for (int row = 0; row < 4; row++) {
+                        const float columnOffset = (keyboardKeys.rowLength[0]-keyboardKeys.rowLength[row])/2.0;
+                        for (int column = 0; column < keyboardKeys.rowLength[row]; column++) {
+                            int i = column + (row ? row * keyboardKeys.rowLength[row-1] : 0);
 
-                        Vector2 center = (Vector2) {
-                            keyboard.x + padding + keyboardKeyRadius + column * (keyboardKeyRadius*2 + padding),
-                            keyboard.y + padding + keyboardKeyRadius + row * (keyboardKeyRadius*2 + padding)
-                        };
+                            Vector2 center = (Vector2) {
+                                keyboard.x + padding + keyboardKeyRadius + (column+columnOffset) * (keyboardKeyRadius*2 + padding),
+                                keyboard.y + padding + keyboardKeyRadius + row * (keyboardKeyRadius*2 + padding)
+                            };
 
-                        char buf[] = {(char) keyboardKeys.keys[i], '\0'};
-                        const int keyFontSize = keyboardKeyRadius*0.8;
-                        const int keyCharWidth = MeasureText(buf, keyFontSize);
+                            char buf[] = {(char) keyboardKeys.keys[i], '\0'};
+                            const int keyFontSize = keyboardKeyRadius*0.67;
+                            const int keyCharWidth = MeasureText(buf, keyFontSize);
 
-                        DrawCircleV(center, keyboardKeyRadius, TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - Lerp(0, 255, keyboardKeys.frames[i]/(float)keyboardKeys.initialFrames)));
-                        DrawText(buf, center.x - keyCharWidth/(float)2, center.y - keyFontSize/(float)2, keyFontSize, GUI_COLOR(TEXT_COLOR_NORMAL));
+                            DrawCircleV(center, keyboardKeyRadius, TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - Lerp(0, 255, keyboardKeys.frames[i]/(float)keyboardKeys.initialFrames)));
+                            DrawText(buf, center.x - keyCharWidth/(float)2, center.y - keyFontSize/(float)2, keyFontSize, GUI_COLOR(TEXT_COLOR_NORMAL));
 
-
-                        keyboardKeys.frames[i] -= keyboardKeys.frames[i] == 0 ? 0 : 1;
+                            keyboardKeys.frames[i] -= keyboardKeys.frames[i] == 0 ? 0 : 1;
+                        }
                     }
                 }
             }
