@@ -66,19 +66,23 @@ static struct {
     float lineSpacing;
 } data;
 
+#define KEYBOARD_KEYS \
+X(0, KEY_ONE) X(1, KEY_TWO) X(2, KEY_THREE) X(3, KEY_FOUR) X(4, KEY_FIVE) X(5, KEY_SIX) X(6, KEY_SEVEN) X(7, KEY_EIGHT) X(8, KEY_NINE) X(9, KEY_ZERO) \
+X(10, KEY_Q) X(11, KEY_W) X(12, KEY_E) X(13, KEY_R) X(14, KEY_T) X(15, KEY_Y) X(16, KEY_U) X(17, KEY_I) X(18, KEY_O) X(19, KEY_P) \
+X(20, KEY_A) X(21, KEY_S) X(22, KEY_D) X(23, KEY_F) X(24, KEY_G) X(25, KEY_H) X(26, KEY_J) X(27, KEY_K) X(28, KEY_L) \
+X(29, KEY_Z) X(30, KEY_X) X(31, KEY_C) X(32, KEY_V) X(33, KEY_B) X(34, KEY_N) X(35, KEY_M)
 
 static struct {
-    KeyboardKey keys[40];
-    int frames[40];
+    KeyboardKey keys[36];
+    int frames[36];
     int rowLength[4];
     int initialFrames;
 } keyboardKeys = {
     .rowLength = { 10, 10, 9, 7 },
     .keys = {
-        KEY_ONE, KEY_TWO, KEY_THREE, KEY_FOUR, KEY_FIVE, KEY_SIX, KEY_SEVEN, KEY_EIGHT, KEY_NINE, KEY_ZERO, // KEY_KP_SUBTRACT, KEY_KP_EQUAL,
-        KEY_Q, KEY_W, KEY_E, KEY_R, KEY_T, KEY_Y, KEY_U, KEY_I, KEY_O, KEY_P,
-        KEY_A, KEY_S, KEY_D, KEY_F, KEY_G, KEY_H, KEY_J, KEY_K, KEY_L,
-        KEY_Z, KEY_X, KEY_C, KEY_V, KEY_B, KEY_N, KEY_M,
+        #define X(i, key) key,
+        KEYBOARD_KEYS
+        #undef X
     },
     .frames = { },
     .initialFrames = 10
@@ -206,13 +210,19 @@ void setFont(char *filename, int fontSize) {
     data.lineSpacing = 0.5*data.fontSize; // 0.5 of height added to the linejump
 }
 
-void keyResetFrames(KeyboardKey key) {
-    for(int i = 0; i < (int) sizeof(keyboardKeys.keys); i++) {
-        if (keyboardKeys.keys[i] == key) {
-            keyboardKeys.frames[i] = keyboardKeys.initialFrames;
-            return;
-        }
+int getKeysIndex(KeyboardKey key) {
+    switch (key) {
+        #define X(i, name) case name: return i;
+        KEYBOARD_KEYS
+        #undef X
+        default: return -1;
     }
+}
+
+void keyResetFrames(KeyboardKey key) {
+    int i = getKeysIndex(key);
+    if (i == -1) return;
+    keyboardKeys.frames[i] = keyboardKeys.initialFrames;
 }
 
 int getForceLayoutKey() {
@@ -312,6 +322,7 @@ int main()
                 keyResetFrames(toupper(key));
             }
 
+
             if (IsKeyPressed(KEY_SPACE) && fitsInRect(cursorPos.x, padding, container)) {
                 cursorPos.x++;
             }
@@ -399,10 +410,9 @@ int main()
                 if (!hideKeyboard || frames < keyboardFrames) {
                     DrawRectangle(0, keyboard.y, screenWidth, keyboard.height, GUI_COLOR(BASE_COLOR_DISABLED));
                     DrawRectangleRec(keyboard, GUI_COLOR(BASE_COLOR_DISABLED));
-                    for (int row = 0; row < 4; row++) {
+                    for (int row = 0, i = 0; row < 4; row++) {
                         const float columnOffset = (keyboardKeys.rowLength[0]-keyboardKeys.rowLength[row])/2.0;
-                        for (int column = 0; column < keyboardKeys.rowLength[row]; column++) {
-                            int i = column + (row ? row * keyboardKeys.rowLength[row-1] : 0);
+                        for (int column = 0; column < keyboardKeys.rowLength[row]; column++, i++) {
 
                             Vector2 center = (Vector2) {
                                 keyboard.x + padding + keyboardKeyRadius + (column+columnOffset) * (keyboardKeyRadius*2 + padding),
