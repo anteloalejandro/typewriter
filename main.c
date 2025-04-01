@@ -243,7 +243,7 @@ int main()
     bool showSettings = false;
     bool forceLayout = false;
     bool hideKeyboard = false;
-    bool showMistakes = true;
+    bool showMistakes = false;
 
     setFont("resources/UbuntuMono-R.ttf", 20);
 
@@ -419,11 +419,38 @@ int main()
                 }
             }
 
-            if (showSettings) {
-                DrawRectangle(screenWidth-220, 0, 220, screenHeight, GUI_COLOR(BORDER_COLOR_DISABLED));
-                GuiToggle((Rectangle) {screenWidth-200, 60, 180, 30}, forceLayout ? GUI_ICON(89) "Force Typewriter Layout" : GUI_ICON(80) "Force Typewriter Layout", &forceLayout);
-                GuiToggle((Rectangle) {screenWidth-200, 100, 180, 30}, hideKeyboard ? GUI_ICON(89) "Hide Keyboard" : GUI_ICON(80) "Hide Keyboard", &hideKeyboard);
-                GuiToggle((Rectangle) {screenWidth-200, 140, 180, 30}, showMistakes ? GUI_ICON(89) "Show Mistakes" : GUI_ICON(80) "Show Mistakes", &showMistakes);
+            {
+                const int settingsWidth = 220;
+                const int finalSettingsX = screenWidth-settingsWidth;
+                static int settingsFrames = 0;
+                int settingsX = 0;
+                if (showSettings) {
+                    settingsFrames++;
+                } else {
+                    settingsFrames--;
+                }
+                settingsFrames = Clamp(settingsFrames, 0, 10.0);
+                settingsX = Lerp(screenWidth, finalSettingsX, settingsFrames/10.0);
+                DrawRectangle(settingsX, 0, settingsWidth, screenHeight, GUI_COLOR(BORDER_COLOR_DISABLED));
+                GuiToggle(
+                    (Rectangle) {settingsX+padding, 60, settingsWidth-padding*2, 30},
+                    forceLayout ? GUI_ICON(89) "Force Typewriter Layout" : GUI_ICON(80) "Force Typewriter Layout",
+                    &forceLayout
+                );
+                GuiToggle(
+                    (Rectangle) {settingsX+padding, 100, settingsWidth-padding*2, 30},
+                    hideKeyboard ? GUI_ICON(89) "Hide Keyboard" : GUI_ICON(80) "Hide Keyboard",
+                    &hideKeyboard
+                );
+                GuiToggle(
+                    (Rectangle) {settingsX+padding, 140, settingsWidth-padding*2, 30},
+                    showMistakes ? GUI_ICON(89) "Show Mistakes" : GUI_ICON(80) "Show Mistakes",
+                    &showMistakes
+                );
+                if (GuiButton((Rectangle) {settingsX+padding, 180, settingsWidth-padding*2, 30}, "Clear mistakes")) {
+                    MistakeList_destroy(&mistakes);
+                    mistakes.head = NULL; mistakes.length = 0;
+                }
             }
 
             GuiToggle((Rectangle){screenWidth-padding-30, padding, 30, 30}, GUI_ICON(214), &showSettings);
