@@ -21,11 +21,11 @@
 #define UNPACK_RECT_PAD(rect, n)                 \
     (rect).x - (n), (rect).y - (n),              \
     (rect).width + (n)*2, (rect).height + (n)*2
-#define VECTOR2_RECT(rect) CLITERAL(Vector2) { (rect.x), (rect.y) }
-#define VECTOR2_RECT_PAD(rect, n) CLITERAL(Vector2) { (rect.x) + (n), (rect.y) + (n) }
+#define VECTOR2(shape) CLITERAL(Vector2) { (shape.x), (shape.y) }
 #define TRI_TO_RECT(tri) CLITERAL(Rectangle) {carret.x, carret.y, carret.c.x, carret.b.y}
 #define GUI_COLOR(color) GetColor(GuiGetStyle(DEFAULT, color))
 #define GUI_ICON(icon) "#" #icon "#"
+#define GUI_TOGGLE_TEXT(isTrue, str) (isTrue) ? GUI_ICON(89) str : GUI_ICON(80) str
 #define TRANSPARENTIZE(color, alpha) CLITERAL(Color) {color.r, color.g, color.b, alpha}
 
 int screenWidth = 1200;
@@ -212,7 +212,7 @@ void drawPage() {
         }
     }
     for (int i = 0; i < rows; i++) {
-        const Vector2 textPos = Vector2Add(VECTOR2_RECT_PAD(container, padding), (Vector2) {0, textSize(i, VERTICAL)});
+        const Vector2 textPos = Vector2Add(VECTOR2(container), (Vector2) {padding, textSize(i, VERTICAL) + padding});
         DrawTextEx(data.font, lines[i].str, textPos, data.fontSize, data.spacing, GUI_COLOR(TEXT_COLOR_NORMAL));
     }
 }
@@ -223,6 +223,7 @@ void drawKeyboard() {
     if (hideKeyboard) frames++;
     else frames--;
     frames = Clamp(frames, 0, keyboardFrames);
+
     keyboard.y = Lerp(screenHeight-keyboard.height, screenHeight, frames/(float)keyboardFrames);
     if (!hideKeyboard || frames < keyboardFrames) {
         DrawRectangle(0, keyboard.y, screenWidth, keyboard.height, GUI_COLOR(BASE_COLOR_DISABLED));
@@ -255,26 +256,26 @@ void drawSettings() {
     const int finalSettingsX = screenWidth-settingsWidth;
     const int settingsFrames = 10;
     static int frames = 0;
-    int settingsX = 0;
     if (showSettings) frames++;
     else frames--;
     frames = Clamp(frames, 0, settingsFrames);
-    settingsX = Lerp(screenWidth, finalSettingsX, frames/(float)settingsFrames);
+
+    const int settingsX = Lerp(screenWidth, finalSettingsX, frames/(float)settingsFrames);
     DrawRectangle(settingsX, 0, settingsWidth, screenHeight, GUI_COLOR(BORDER_COLOR_DISABLED));
     DrawText("General Settings", settingsX+padding, 60, 20, GUI_COLOR(BACKGROUND_COLOR));
     GuiToggle(
         (Rectangle) {settingsX+padding, 90, settingsWidth-padding*2, 30},
-        forceLayout ? GUI_ICON(89) "Force Typewriter Layout" : GUI_ICON(80) "Force Typewriter Layout",
+        GUI_TOGGLE_TEXT(forceLayout, "Force Typewriter Layout"),
         &forceLayout
     );
     GuiToggle(
         (Rectangle) {settingsX+padding, 130, settingsWidth-padding*2, 30},
-        hideKeyboard ? GUI_ICON(89) "Hide Keyboard" : GUI_ICON(80) "Hide Keyboard",
+        GUI_TOGGLE_TEXT(hideKeyboard, "Hide Keyboard"),
         &hideKeyboard
     );
     GuiToggle(
         (Rectangle) {settingsX+padding, 170, settingsWidth-padding*2, 30},
-        enableOverlapping ? GUI_ICON(89) "Enable character overlapping" : GUI_ICON(80) "Enable character overlapping",
+        GUI_TOGGLE_TEXT(enableOverlapping, "Enable character overlapping"),
         &enableOverlapping
     );
     if (GuiButton((Rectangle) {settingsX+padding, 210, settingsWidth-padding*2, 30}, "Clear Floating Chars")) {
@@ -284,42 +285,38 @@ void drawSettings() {
 
     DrawText("Font Settings", settingsX+padding, 260, 20, GUI_COLOR(BACKGROUND_COLOR));
     static int item = 0;
-    bool fontChanged = GuiDropdownBox(
+    const bool fontChanged = GuiDropdownBox(
         (Rectangle) {settingsX+padding, 290, settingsWidth-padding*2, 30},
-        "Modern\nClassic",
-        &item,
-        true
+        "Modern\nClassic", &item, true
     );
     if (fontChanged) setFont(fonts[item].path, fonts[item].fontSize);
 
-    GuiToggle((Rectangle){screenWidth-padding-30, padding, 30, 30}, showSettings ? GUI_ICON(113) : GUI_ICON(214), &showSettings);
+    GuiToggle(
+        (Rectangle) {screenWidth-padding-30, padding, 30, 30},
+        showSettings ? GUI_ICON(113) : GUI_ICON(214), &showSettings
+    );
 }
 
 void drawDebugInfo() {
-    DrawLine(0, container.y, screenWidth, container.y, GUI_COLOR(BORDER_COLOR_FOCUSED));
-    DrawText("X", container.x+margin, margin, 10, GUI_COLOR(BORDER_COLOR_FOCUSED));
-    DrawLine(container.x, 0, container.x, screenHeight, GUI_COLOR(BORDER_COLOR_FOCUSED));
-    DrawText("Y", margin, container.y+margin, 10, GUI_COLOR(BORDER_COLOR_FOCUSED));
+    Color color = GUI_COLOR(BORDER_COLOR_FOCUSED);
+    DrawLine(0, container.y, screenWidth, container.y, color);
+    DrawText("X", container.x+margin, margin, 10, color);
+    DrawLine(container.x, 0, container.x, screenHeight, color);
+    DrawText("Y", margin, container.y+margin, 10, color);
 }
 
-int main()
-{
+int main() {
     init();
 
-    while (!WindowShouldClose())
-    {
+    while (!WindowShouldClose()) {
         handleInput();
-
         updatePositions();
 
         BeginDrawing();
         {
             drawPage();
-
             drawKeyboard();
-
             drawSettings();
-
             drawDebugInfo();
         }
         EndDrawing();
