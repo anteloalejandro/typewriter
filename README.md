@@ -6,6 +6,23 @@ Made with raylib and raygui.
 
 ## Build
 
+### Install dependencies
+
+At the moment, GLFW is required to handle the CAPS LOCK state,
+and the code won't compile without it.
+
+#### Ubuntu
+
+```bash
+sudo apt install libglfw3-dev
+```
+
+#### Arch
+
+```
+sudo pacman -S glfw
+```
+
 ### Run build script
 
 ```bash
