@@ -10,8 +10,16 @@ X(20, KEY_A) X(21, KEY_S) X(22, KEY_D) X(23, KEY_F) X(24, KEY_G) X(25, KEY_H) X(
 X(29, KEY_Z) X(30, KEY_X) X(31, KEY_C) X(32, KEY_V) X(33, KEY_B) X(34, KEY_N) X(35, KEY_M)
 
 struct {
-    KeyboardKey keys[36];
-    int frames[36];
+    KeyboardKey keys[
+        #define X(i, key) +1
+        KEYBOARD_KEYS
+        #undef X
+    ];
+    int frames[
+        #define X(i, key) +1
+        KEYBOARD_KEYS
+        #undef X
+    ];
     int rows[4];
     int initialFrames;
 } keyboardKeys = {
