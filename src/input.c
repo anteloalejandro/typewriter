@@ -1,5 +1,6 @@
 #include "../raylib/include/raygui.h"
 #include <ctype.h>
+#include <GLFW/glfw3.h>
 
 // STATIC VARIABLES
 #define KEYBOARD_KEYS \
@@ -24,15 +25,6 @@ struct {
     .initialFrames = 10
 };
 
-struct {
-    char *name;
-    char *path;
-    int fontSize;
-} fonts[] = {
-    { "Ubuntu Mono", "resources/UbuntuMono-R.ttf", 20 },
-    { "Courier New", "resources/cour.ttf", 20 },
-};
-
 int getKeysIndex(KeyboardKey key) {
     switch (key) {
         #define X(i, name) case name: return i;
@@ -48,9 +40,31 @@ void keyResetFrames(KeyboardKey key) {
     keyboardKeys.frames[i] = keyboardKeys.initialFrames;
 }
 
+// Figure out wether the caps lock is active or not, using GLFW.
+// Assumes it's off by default.
+// NOTE: CAPS_LOCK is broken on raylib and will always only be detected as DOWN once pressed,
+// and there is no way to change it.
+// <https://github.com/raysan5/raylib/issues/4078>
+bool isCapsLockActive() {
+    static bool lastState = false;
+    static bool isActive = false;
+
+    static bool isGlfwContextSet = false;
+    if (!isGlfwContextSet) {
+        glfwMakeContextCurrent(GetWindowHandle());
+        isGlfwContextSet = true;
+    }
+
+    GLFWwindow *w = glfwGetCurrentContext();
+    const bool currentState = glfwGetKey(w, GLFW_KEY_CAPS_LOCK);
+
+    if (currentState && !lastState) isActive = !isActive;
+    lastState = currentState;
+
+    return isActive;
+}
+
 int getForceLayoutKey() {
-    // NOTE: CAPS_LOCK is broken on raylib and will always only be detected as DOWN once pressed,
-    // and there is no way to change it. Thus, proper CAPS_LOCK behaviour cannot be implemented.
     int key = GetKeyPressed();
     if (IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT)) {
         switch (key) {
@@ -60,7 +74,8 @@ int getForceLayoutKey() {
             case KEY_PERIOD: key = '>'; break;
             default: break;
         }
-    } else {
+
+    } else if (!isCapsLockActive()) {
         key = tolower(key);
     }
     return key;
