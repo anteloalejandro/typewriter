@@ -35,6 +35,13 @@ struct {
     { "Ubuntu Mono", "resources/UbuntuMono-R.ttf", 20 },
     { "Courier New", "resources/cour.ttf", 20 },
 };
+struct {
+    char *name;
+    char *path;
+} themes[] = {
+    { "Light", NULL },
+    { "Dark", "resources/style_dark.rgs" }
+};
 
 int screenWidth = 1200;
 int screenHeight = 800;
@@ -330,15 +337,34 @@ void drawSettings() {
     }
 
     DrawText("Font Settings", settingsX+padding, getAndIncrement(&y, 20+padding), 20, GUI_COLOR(BACKGROUND_COLOR));
-    static int item = 0;
-    static int prevItem = 0;
-    prevItem = item;
-    const bool fontChanged = GuiDropdownBox(
-        (Rectangle) {settingsX+padding, getAndIncrement(&y, 30*3 + padding), settingsWidth-padding*2, 30},
-        "Modern\nClassic", &item, true
-    );
-    if (fontChanged && prevItem != item) setFont(fonts[item].path, fonts[item].fontSize);
+    {
+        static int item = 0;
+        static int prevItem = 0;
+        prevItem = item;
+        const bool itemChanged = GuiDropdownBox(
+            (Rectangle) {settingsX+padding, getAndIncrement(&y, 30*3 + padding), settingsWidth-padding*2, 30},
+            "Modern\nClassic", &item, true
+        );
+        if (itemChanged && prevItem != item) setFont(fonts[item].path, fonts[item].fontSize);
+    }
 
+    DrawText("Style Settings", settingsX+padding, getAndIncrement(&y, 20+padding), 20, GUI_COLOR(BACKGROUND_COLOR));
+    {
+        static int item = 0;
+        static int prevItem = 0;
+        prevItem = item;
+        const bool itemChanged = GuiDropdownBox(
+            (Rectangle) {settingsX+padding, getAndIncrement(&y, 30*3 + padding), settingsWidth-padding*2, 30},
+            "Light\nDark", &item, true
+        );
+        if (itemChanged && prevItem != item) {
+            if (themes[item].path == NULL) {
+                GuiLoadStyleDefault();
+            } else {
+                GuiLoadStyle(themes[item].path);
+            }
+        }
+    }
 }
 
 void drawDebugInfo() {
