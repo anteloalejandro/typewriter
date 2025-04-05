@@ -7,7 +7,8 @@
 X(0, KEY_ONE) X(1, KEY_TWO) X(2, KEY_THREE) X(3, KEY_FOUR) X(4, KEY_FIVE) X(5, KEY_SIX) X(6, KEY_SEVEN) X(7, KEY_EIGHT) X(8, KEY_NINE) X(9, KEY_ZERO) \
 X(10, KEY_Q) X(11, KEY_W) X(12, KEY_E) X(13, KEY_R) X(14, KEY_T) X(15, KEY_Y) X(16, KEY_U) X(17, KEY_I) X(18, KEY_O) X(19, KEY_P) \
 X(20, KEY_A) X(21, KEY_S) X(22, KEY_D) X(23, KEY_F) X(24, KEY_G) X(25, KEY_H) X(26, KEY_J) X(27, KEY_K) X(28, KEY_L) \
-X(29, KEY_Z) X(30, KEY_X) X(31, KEY_C) X(32, KEY_V) X(33, KEY_B) X(34, KEY_N) X(35, KEY_M)
+X(29, KEY_Z) X(30, KEY_X) X(31, KEY_C) X(32, KEY_V) X(33, KEY_B) X(34, KEY_N) X(35, KEY_M) \
+X(36, KEY_SPACE)
 
 struct {
     KeyboardKey keys[
@@ -20,10 +21,10 @@ struct {
         KEYBOARD_KEYS
         #undef X
     ];
-    int rows[4];
+    int rows[5];
     int initialFrames;
 } keyboardKeys = {
-    .rows = { 10, 10, 9, 7 },
+    .rows = { 10, 10, 9, 7, 1 },
     .keys = {
         #define X(i, key) key,
         KEYBOARD_KEYS

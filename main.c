@@ -91,9 +91,11 @@ void init() {
         {0, 0}, {0, data.fontSize}, {data.charWidth, data.fontSize/(float)2}
     };
 
+    const int nRows = sizeof(keyboardKeys.rows)/sizeof(int);
+    const int maxCols = 10;
     keyboard = (Rectangle) {
-        .height = (keyRadius*2 + padding) * 4 + padding,
-        .width = (keyRadius*2 + padding) * 10 + padding,
+        .height = (keyRadius*2 + padding) * nRows + padding,
+        .width = (keyRadius*2 + padding) * maxCols + padding,
     };
 
     lines = realloc(lines, sizeof(Str)*rows);
@@ -236,10 +238,10 @@ void drawKeyboard() {
     if (!hideKeyboard || frames < keyboardFrames) {
         DrawRectangle(0, keyboard.y, screenWidth, keyboard.height, GUI_COLOR(BASE_COLOR_DISABLED));
         DrawRectangleRec(keyboard, GUI_COLOR(BASE_COLOR_DISABLED));
-        for (int row = 0, i = 0; row < 4; row++) {
+        const int nRows = sizeof(keyboardKeys.rows)/sizeof(int);
+        for (int row = 0, i = 0; row < nRows; row++) {
             const float columnOffset = (keyboardKeys.rows[0]-keyboardKeys.rows[row])/2.0;
             for (int column = 0; column < keyboardKeys.rows[row]; column++, i++) {
-
                 Vector2 center = (Vector2) {
                     keyboard.x + padding + keyRadius + (column+columnOffset) * (keyRadius*2 + padding),
                     keyboard.y + padding + keyRadius + row * (keyRadius*2 + padding)
@@ -250,8 +252,30 @@ void drawKeyboard() {
                 const int keyCharWidth = MeasureText(buf, keyFontSize);
 
                 const unsigned char transparency = Lerp(0, 255, keyboardKeys.frames[i]/(float)keyboardKeys.initialFrames);
-                DrawCircleV(center, keyRadius, TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - transparency));
-                DrawText(buf, center.x - keyCharWidth/(float)2, center.y - keyFontSize/(float)2, keyFontSize, GUI_COLOR(TEXT_COLOR_NORMAL));
+                if (keyboardKeys.keys[i] == KEY_SPACE) {
+                    const int spacebarWidth = keyCharWidth * 30;
+                    DrawCircleV(
+                        Vector2Add(center, (Vector2) {-spacebarWidth/2.0, 0}), keyRadius,
+                        TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - transparency)
+                    );
+                    DrawCircleV(
+                        Vector2Add(center, (Vector2) {spacebarWidth/2.0, 0}), keyRadius,
+                        TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - transparency)
+                    );
+                    DrawRectangle(
+                        center.x - spacebarWidth/2.0, center.y - keyRadius,
+                        spacebarWidth, keyRadius*2,
+                        TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - transparency)
+                    );
+                    DrawText(
+                        "SPACE",
+                        center.x - MeasureText("SPACE", keyFontSize)/2.0, center.y - keyFontSize/2.0,
+                        keyFontSize, GUI_COLOR(TEXT_COLOR_NORMAL)
+                    );
+                } else {
+                    DrawCircleV(center, keyRadius, TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - transparency));
+                    DrawText(buf, center.x - keyCharWidth/(float)2, center.y - keyFontSize/(float)2, keyFontSize, GUI_COLOR(TEXT_COLOR_NORMAL));
+                }
 
                 keyboardKeys.frames[i] -= keyboardKeys.frames[i] == 0 ? 0 : 1;
             }
