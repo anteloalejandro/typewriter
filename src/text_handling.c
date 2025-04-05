@@ -4,6 +4,8 @@
 
 #include "../raylib/include/raylib.h"
 
+#define STR_INIT(string) (string).str = NULL; (string).length = 0;
+
 typedef struct {
     char *str;
     int length;

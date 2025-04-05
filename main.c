@@ -67,14 +67,25 @@ Rectangle keyboard;
 Str *lines = NULL;
 FloatingCharList fchars = { NULL, 0 };
 
+// reloads the font after GuiLoadStyle breaks it.
+void setTheme(char *theme, char *font, int fontSize) {
+    if (theme == NULL) {
+        GuiLoadStyleDefault();
+    } else {
+        GuiLoadStyle(theme);
+    }
+    setFont(font, fontSize);
+}
+
 void init() {
     InitWindow(screenWidth, screenHeight, "Typewriter");
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT);
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     SetTargetFPS(60);
+    SetExitKey(0); // Disable exit key
 
     SetRandomSeed(time(NULL));
 
-    setFont(fonts[0].path, fonts[0].fontSize);
+    setTheme(themes[0].path, fonts[0].path, fonts[0].fontSize);
 
     cursorPos = (Position) {0, 0};
     fchars = (FloatingCharList) { NULL, 0 };
@@ -107,14 +118,12 @@ void init() {
 
     lines = realloc(lines, sizeof(Str)*rows);
     for (int i = 0; i < rows; i++) {
-        lines[i].str = NULL;
-        lines[i].length = 0;
+        STR_INIT(lines[i]);
 
         char buf[cols+1];
         snprintf(buf, cols, "%*s", cols, "");
         Str_append(lines+i, buf, cols);
     }
-
 }
 
 void closeAndFree() {
@@ -261,12 +270,14 @@ void drawKeyboard() {
                 const unsigned char transparency = Lerp(0, 255, keyboardKeys.frames[i]/(float)keyboardKeys.initialFrames);
                 if (keyboardKeys.keys[i] == KEY_SPACE) {
                     const int spacebarWidth = keyCharWidth * 30;
-                    DrawCircleV(
+                    DrawCircleSector(
                         Vector2Add(center, (Vector2) {-spacebarWidth/2.0, 0}), keyRadius,
+                        90, 270, 20, /* Left semicircle */
                         TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - transparency)
                     );
-                    DrawCircleV(
+                    DrawCircleSector(
                         Vector2Add(center, (Vector2) {spacebarWidth/2.0, 0}), keyRadius,
+                        270, 450, 20, /* Right semicircle */
                         TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - transparency)
                     );
                     DrawRectangle(
@@ -331,39 +342,38 @@ void drawSettings() {
         GUI_TOGGLE_TEXT(enableOverlapping, "Enable character overlapping"),
         &enableOverlapping
     );
-    if (GuiButton((Rectangle) {settingsX+padding, getAndIncrement(&y, 30+20+padding), settingsWidth-padding*2, 30}, "Clear Floating Chars")) {
+    if (GuiButton((Rectangle) {settingsX+padding, getAndIncrement(&y, 30+padding), settingsWidth-padding*2, 30}, "Clear Floating Chars")) {
         FloatingCharList_destroy(&fchars);
         fchars.head = NULL; fchars.length = 0;
     }
+    y+=20;
 
+    static int selectedFont = 0;
     DrawText("Font Settings", settingsX+padding, getAndIncrement(&y, 20+padding), 20, GUI_COLOR(BACKGROUND_COLOR));
     {
-        static int item = 0;
-        static int prevItem = 0;
-        prevItem = item;
+        static int prevItem;
+        prevItem = selectedFont;
         const bool itemChanged = GuiDropdownBox(
             (Rectangle) {settingsX+padding, getAndIncrement(&y, 30*3 + padding), settingsWidth-padding*2, 30},
-            "Modern\nClassic", &item, true
+            "Modern\nClassic", &selectedFont, true
         );
-        if (itemChanged && prevItem != item) setFont(fonts[item].path, fonts[item].fontSize);
+        if (itemChanged && prevItem != selectedFont) setFont(fonts[selectedFont].path, fonts[selectedFont].fontSize);
+        selectedFont = selectedFont;
     }
+    y+=20;
 
     DrawText("Style Settings", settingsX+padding, getAndIncrement(&y, 20+padding), 20, GUI_COLOR(BACKGROUND_COLOR));
     {
         static int item = 0;
-        static int prevItem = 0;
+        static int prevItem;
         prevItem = item;
+        char buf[64];
         const bool itemChanged = GuiDropdownBox(
             (Rectangle) {settingsX+padding, getAndIncrement(&y, 30*3 + padding), settingsWidth-padding*2, 30},
             "Light\nDark", &item, true
         );
-        if (itemChanged && prevItem != item) {
-            if (themes[item].path == NULL) {
-                GuiLoadStyleDefault();
-            } else {
-                GuiLoadStyle(themes[item].path);
-            }
-        }
+        if (itemChanged && prevItem != item)
+            setTheme(themes[item].path, fonts[selectedFont].path, fonts[selectedFont].fontSize);
     }
 }
 
