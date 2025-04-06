@@ -48,9 +48,9 @@ int screenWidth = 1200;
 int screenHeight = 800;
 
 bool showSettings = false;
-bool forceLayout = false;
+bool forceLayout = true;
 bool hideKeyboard = false;
-bool enableOverlapping = false;
+bool enableOverlapping = true;
 
 const int margin = 20;
 const int padding = 5;
@@ -113,7 +113,7 @@ void init() {
         {0, 0}, {0, data.fontSize}, {data.charWidth, data.fontSize/(float)2}
     };
 
-    const int nRows = sizeof(keyboardKeys.rows)/sizeof(int);
+    const int nRows = sizeof(quertyLayout.rows)/sizeof(int);
     const int maxCols = 10;
     keyboard = (Rectangle) {
         .height = (keyRadius*2 + padding) * nRows + padding,
@@ -273,21 +273,21 @@ void drawKeyboard() {
     if (!hideKeyboard || frames < keyboardFrames) {
         DrawRectangle(0, keyboard.y, screenWidth, keyboard.height, GUI_COLOR(BASE_COLOR_DISABLED));
         DrawRectangleRec(keyboard, GUI_COLOR(BASE_COLOR_DISABLED));
-        const int nRows = sizeof(keyboardKeys.rows)/sizeof(int);
+        const int nRows = sizeof(quertyLayout.rows)/sizeof(int);
         for (int row = 0, i = 0; row < nRows; row++) {
-            const float columnOffset = (keyboardKeys.rows[0]-keyboardKeys.rows[row])/2.0;
-            for (int column = 0; column < keyboardKeys.rows[row]; column++, i++) {
+            const float columnOffset = (quertyLayout.rows[0]-quertyLayout.rows[row])/2.0;
+            for (int column = 0; column < quertyLayout.rows[row]; column++, i++) {
                 Vector2 center = (Vector2) {
                     keyboard.x + padding + keyRadius + (column+columnOffset) * (keyRadius*2 + padding),
                     keyboard.y + padding + keyRadius + row * (keyRadius*2 + padding)
                 };
 
-                char buf[] = {(char) keyboardKeys.keys[i], '\0'};
+                char buf[] = {(char) quertyLayout.keys[i], '\0'};
                 const int keyFontSize = keyRadius*0.67;
                 const int keyCharWidth = MeasureText(buf, keyFontSize);
 
-                const unsigned char transparency = Lerp(0, 255, keyboardKeys.frames[i]/(float)keyboardKeys.initialFrames);
-                if (keyboardKeys.keys[i] == KEY_SPACE) {
+                const unsigned char transparency = Lerp(0, 255, quertyLayout.frames[i]/(float)quertyLayout.initialFrames);
+                if (quertyLayout.keys[i] == KEY_SPACE) {
                     const int spacebarWidth = keyCharWidth * 30;
                     DrawCircleSector(
                         Vector2Add(center, (Vector2) {-spacebarWidth/2.0, 0}), keyRadius,
@@ -314,7 +314,7 @@ void drawKeyboard() {
                     DrawText(buf, center.x - keyCharWidth/(float)2, center.y - keyFontSize/(float)2, keyFontSize, GUI_COLOR(TEXT_COLOR_NORMAL));
                 }
 
-                keyboardKeys.frames[i] -= keyboardKeys.frames[i] == 0 ? 0 : 1;
+                quertyLayout.frames[i] -= quertyLayout.frames[i] == 0 ? 0 : 1;
             }
         }
     }
