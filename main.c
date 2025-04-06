@@ -3,6 +3,7 @@
 #include <ctype.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 #include <time.h>
 #include "headers/shared.h"
 #include "src/floatingchars.c"
@@ -27,7 +28,7 @@
 #define GUI_TOGGLE_TEXT(isTrue, str) GuiIconText((isTrue) ? ICON_BOX_CENTER : ICON_BOX, str)
 #define TRANSPARENTIZE(color, alpha) CLITERAL(Color) {color.r, color.g, color.b, alpha}
 
-struct {
+struct FontItem {
     char *name;
     char *path;
     int fontSize;
@@ -35,7 +36,7 @@ struct {
     { "Ubuntu Mono", "resources/UbuntuMono-R.ttf", 20 },
     { "Courier New", "resources/cour.ttf", 20 },
 };
-struct {
+struct ThemeItem {
     char *name;
     char *path;
 } themes[] = {
@@ -66,6 +67,9 @@ Triangle carret;
 Rectangle keyboard;
 Str *lines = NULL;
 FloatingCharList fchars = { NULL, 0 };
+
+char fontDropdownBuf[64] = "";
+char themeDropdownBuf[64] = "";
 
 // reloads the font after GuiLoadStyle breaks it.
 void setTheme(char *theme, char *font, int fontSize) {
@@ -124,6 +128,21 @@ void init() {
         snprintf(buf, cols, "%*s", cols, "");
         Str_append(lines+i, buf, cols);
     }
+
+    int n = sizeof(fonts)/sizeof(struct FontItem);
+    for (int i = 0; i < n && i < (int)sizeof(fontDropdownBuf); i++) {
+        strcat(fontDropdownBuf, fonts[i].name);
+        strcat(fontDropdownBuf, "\n");
+    }
+    fontDropdownBuf[strlen(fontDropdownBuf)-1] = '\0';
+
+
+    n = sizeof(themes)/sizeof(struct ThemeItem);
+    for (int i = 0; i < n && i < (int)sizeof(themeDropdownBuf); i++) {
+        strcat(themeDropdownBuf, themes[i].name);
+        strcat(themeDropdownBuf, "\n");
+    }
+    themeDropdownBuf[strlen(themeDropdownBuf)-1] = '\0';
 }
 
 void closeAndFree() {
@@ -355,7 +374,7 @@ void drawSettings() {
         prevItem = selectedFont;
         const bool itemChanged = GuiDropdownBox(
             (Rectangle) {settingsX+padding, getAndIncrement(&y, 30*3 + padding), settingsWidth-padding*2, 30},
-            "Modern\nClassic", &selectedFont, true
+            fontDropdownBuf, &selectedFont, true
         );
         if (itemChanged && prevItem != selectedFont) setFont(fonts[selectedFont].path, fonts[selectedFont].fontSize);
         selectedFont = selectedFont;
@@ -367,10 +386,9 @@ void drawSettings() {
         static int item = 0;
         static int prevItem;
         prevItem = item;
-        char buf[64];
         const bool itemChanged = GuiDropdownBox(
             (Rectangle) {settingsX+padding, getAndIncrement(&y, 30*3 + padding), settingsWidth-padding*2, 30},
-            "Light\nDark", &item, true
+            themeDropdownBuf, &item, true
         );
         if (itemChanged && prevItem != item)
             setTheme(themes[item].path, fonts[selectedFont].path, fonts[selectedFont].fontSize);
