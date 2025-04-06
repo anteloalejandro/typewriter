@@ -7,7 +7,7 @@ FILES=$(ls src/shared.c)
 OPTIONS="-Wall -Werror -Wextra $@"
 DEBUG=1
 
-if test $DEBUG -ne 0; then OPTIONS="${OPTIONS} -ggdb"; fi
+if test $DEBUG -ne 0; then OPTIONS="${OPTIONS} -ggdb -DDEBUG"; fi
 
 mkdir -p bin
 gcc main.c -o bin/main $FILES $LIBS $OPTIONS

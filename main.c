@@ -57,7 +57,7 @@ const int padding = 5;
 const int border = 3;
 const int rows = 20;
 const int cols = 80;
-const int scrollSpeed = 10;
+const int scrollSpeed = 15;
 const float keyRadius = 30;
 
 Position cursorPos;
@@ -395,6 +395,7 @@ void drawSettings() {
     }
 }
 
+#ifdef DEBUG
 void drawDebugInfo() {
     Color color = GUI_COLOR(BORDER_COLOR_FOCUSED);
     DrawLine(0, container.y, screenWidth, container.y, color);
@@ -402,6 +403,7 @@ void drawDebugInfo() {
     DrawLine(container.x, 0, container.x, screenHeight, color);
     DrawText("Y", margin, container.y+margin, 10, color);
 }
+#endif /* ifdef DEBUG */
 
 int main() {
     init();
@@ -415,7 +417,9 @@ int main() {
             drawPage();
             drawKeyboard();
             drawSettings();
+            #ifdef DEBUG
             drawDebugInfo();
+            #endif /* ifdef DEBUG */
         }
         EndDrawing();
     }
