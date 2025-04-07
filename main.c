@@ -114,7 +114,7 @@ void init() {
     };
 
     const int nRows = sizeof(qwertyLayout.rows)/sizeof(int);
-    const int maxCols = 10;
+    const int maxCols = qwertyLayout.rows[0];
     keyboard = (Rectangle) {
         .height = (keyRadius*2 + padding) * nRows + padding,
         .width = (keyRadius*2 + padding) * maxCols + padding,
@@ -311,7 +311,15 @@ void drawKeyboard() {
                     );
                 } else {
                     DrawCircleV(center, keyRadius, TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - transparency));
-                    DrawText(buf, center.x - keyCharWidth/(float)2, center.y - keyFontSize/(float)2, keyFontSize, GUI_COLOR(TEXT_COLOR_NORMAL));
+                    // printf("%c, %c\n", qwertyLayout.keys[i], qwertyLayout.shiftKeys[i]);
+                    if ((int)qwertyLayout.keys[i] == qwertyLayout.shiftKeys[i]) {
+                        DrawText(buf, center.x - keyCharWidth/(float)2, center.y - keyFontSize/(float)2, keyFontSize, GUI_COLOR(TEXT_COLOR_NORMAL));
+                    } else {
+                        char shiftBuf[2] = ""; shiftBuf[0] = qwertyLayout.shiftKeys[i];
+                        const float shiftCharWidth = MeasureText(shiftBuf, keyFontSize);
+                        DrawText(shiftBuf, center.x - shiftCharWidth/(float)2, center.y - keyFontSize, keyFontSize, GUI_COLOR(TEXT_COLOR_NORMAL));
+                        DrawText(buf, center.x - keyCharWidth/(float)2, center.y, keyFontSize, GUI_COLOR(TEXT_COLOR_NORMAL));
+                    }
                 }
 
                 qwertyLayout.frames[i] -= qwertyLayout.frames[i] == 0 ? 0 : 1;
