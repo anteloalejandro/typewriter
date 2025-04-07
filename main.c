@@ -115,13 +115,6 @@ void init() {
         {0, 0}, {0, data.fontSize}, {data.charWidth, data.fontSize/(float)2}
     };
 
-    const int nRows = qwertyLayout.nRows;
-    const int maxCols = qwertyLayout.rows[0];
-    keyboard = (Rectangle) {
-        .height = (keyRadius*2 + padding) * nRows + padding,
-        .width = (keyRadius*2 + padding) * maxCols + padding,
-    };
-
     lines = realloc(lines, sizeof(Str)*rows);
     for (int i = 0; i < rows; i++) {
         STR_INIT(lines[i]);
@@ -234,6 +227,8 @@ void updatePositions() {
     carret.x = container.x - border - padding - data.fontSize/(float)2,
         carret.y = cursor.y;
 
+    keyboard.height = (keyRadius*2 + padding) * layouts[layout]->nRows + padding,
+    keyboard.width = (keyRadius*2 + padding) * layouts[layout]->rows[0] + padding,
     keyboard.x = (screenWidth - keyboard.width)/2;
     keyboard.y = screenHeight - keyboard.height;
 }
@@ -276,21 +271,21 @@ void drawKeyboard() {
     if (!hideKeyboard || frames < keyboardFrames) {
         DrawRectangle(0, keyboard.y, screenWidth, keyboard.height, GUI_COLOR(BASE_COLOR_DISABLED));
         DrawRectangleRec(keyboard, GUI_COLOR(BASE_COLOR_DISABLED));
-        const int nRows = qwertyLayout.nRows;
+        const int nRows = layouts[layout]->nRows;
         for (int row = 0, i = 0; row < nRows; row++) {
-            const float columnOffset = (qwertyLayout.rows[0]-qwertyLayout.rows[row])/2.0;
-            for (int column = 0; column < qwertyLayout.rows[row]; column++, i++) {
+            const float columnOffset = (layouts[layout]->rows[0]-layouts[layout]->rows[row])/2.0;
+            for (int column = 0; column < layouts[layout]->rows[row]; column++, i++) {
                 Vector2 center = (Vector2) {
                     keyboard.x + padding + keyRadius + (column+columnOffset) * (keyRadius*2 + padding),
                     keyboard.y + padding + keyRadius + row * (keyRadius*2 + padding)
                 };
 
-                char buf[] = {(char) qwertyLayout.keys[i], '\0'};
+                char buf[] = {(char) layouts[layout]->keys[i], '\0'};
                 const int keyFontSize = keyRadius*0.67;
                 const int keyCharWidth = MeasureText(buf, keyFontSize);
 
-                const unsigned char transparency = Lerp(0, 255, qwertyLayout.frames[i]/(float)keyAnimationFrames);
-                if (qwertyLayout.keys[i] == KEY_SPACE) {
+                const unsigned char transparency = Lerp(0, 255, layouts[layout]->frames[i]/(float)keyAnimationFrames);
+                if (layouts[layout]->keys[i] == KEY_SPACE) {
                     const int spacebarWidth = keyCharWidth * 30;
                     DrawCircleSector(
                         Vector2Add(center, (Vector2) {-spacebarWidth/2.0, 0}), keyRadius,
@@ -314,18 +309,18 @@ void drawKeyboard() {
                     );
                 } else {
                     DrawCircleV(center, keyRadius, TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - transparency));
-                    // printf("%c, %c\n", qwertyLayout.keys[i], qwertyLayout.shiftKeys[i]);
-                    if ((int)qwertyLayout.keys[i] == qwertyLayout.shiftKeys[i]) {
+                    // printf("%c, %c\n", layout->keys[i], layout->shiftKeys[i]);
+                    if ((int)layouts[layout]->keys[i] == layouts[layout]->shiftKeys[i]) {
                         DrawText(buf, center.x - keyCharWidth/(float)2, center.y - keyFontSize/(float)2, keyFontSize, GUI_COLOR(TEXT_COLOR_NORMAL));
                     } else {
-                        char shiftBuf[2] = ""; shiftBuf[0] = qwertyLayout.shiftKeys[i];
+                        char shiftBuf[2] = ""; shiftBuf[0] = layouts[layout]->shiftKeys[i];
                         const float shiftCharWidth = MeasureText(shiftBuf, keyFontSize);
                         DrawText(shiftBuf, center.x - shiftCharWidth/(float)2, center.y - keyFontSize, keyFontSize, GUI_COLOR(TEXT_COLOR_NORMAL));
                         DrawText(buf, center.x - keyCharWidth/(float)2, center.y, keyFontSize, GUI_COLOR(TEXT_COLOR_NORMAL));
                     }
                 }
 
-                qwertyLayout.frames[i] -= qwertyLayout.frames[i] == 0 ? 0 : 1;
+                layouts[layout]->frames[i] -= layouts[layout]->frames[i] == 0 ? 0 : 1;
             }
         }
     }
@@ -403,6 +398,20 @@ void drawSettings() {
         );
         if (itemChanged && prevItem != item)
             setTheme(themes[item].path, fonts[selectedFont].path, fonts[selectedFont].fontSize);
+    }
+    y+=20;
+
+    DrawText("Layout Settings", settingsX+padding, getAndIncrement(&y, 20+padding), 20, GUI_COLOR(BACKGROUND_COLOR));
+    {
+        static int item = 0;
+        static int prevItem;
+        prevItem = item;
+        const bool itemChanged = GuiDropdownBox(
+            (Rectangle) {settingsX+padding, getAndIncrement(&y, 30*3 + padding), settingsWidth-padding*2, 30},
+            "QWERTY\nBASIC", &item, true
+        );
+        if (itemChanged && prevItem != item)
+            layout = item;
     }
 }
 
