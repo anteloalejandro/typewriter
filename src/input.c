@@ -28,7 +28,7 @@ struct {
     ];
     int rows[5];
     int initialFrames;
-} quertyLayout = {
+} qwertyLayout = {
     .rows = { 10, 10, 9, 7, 1 },
     .keys = {
         #define X(i, key, shift) key,
@@ -55,7 +55,7 @@ int getKeysIndex(KeyboardKey key) {
 int getKeyShift(KeyboardKey key) {
     int i = getKeysIndex(key);
     if (i == -1) return -1;
-    return quertyLayout.shiftKeys[i];
+    return qwertyLayout.shiftKeys[i];
 }
 int getKeyNoShift(int c) {
     if (getKeysIndex(c) != -1) return c;
@@ -71,7 +71,7 @@ int getKeyNoShift(int c) {
 void keyResetFrames(KeyboardKey key) {
     int i = getKeysIndex(getKeyNoShift(key));
     if (i == -1) return;
-    quertyLayout.frames[i] = quertyLayout.initialFrames;
+    qwertyLayout.frames[i] = qwertyLayout.initialFrames;
 }
 
 // Figure out wether the caps lock is active or not, using GLFW.
