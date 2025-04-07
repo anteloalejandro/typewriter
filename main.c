@@ -91,6 +91,8 @@ void init() {
 
     setTheme(themes[0].path, fonts[0].path, fonts[0].fontSize);
 
+    initKeyboardLayouts();
+
     cursorPos = (Position) {0, 0};
     fchars = (FloatingCharList) { NULL, 0 };
 
@@ -113,7 +115,7 @@ void init() {
         {0, 0}, {0, data.fontSize}, {data.charWidth, data.fontSize/(float)2}
     };
 
-    const int nRows = sizeof(qwertyLayout.rows)/sizeof(int);
+    const int nRows = qwertyLayout.nRows;
     const int maxCols = qwertyLayout.rows[0];
     keyboard = (Rectangle) {
         .height = (keyRadius*2 + padding) * nRows + padding,
@@ -148,6 +150,7 @@ void init() {
 void closeAndFree() {
     for (int i = 0; i < rows; i++) Str_destroy(lines+i);
     free(lines);
+    freeKeyboardLayouts();
     FloatingCharList_destroy(&fchars);
     UnloadFont(data.font);
 }
@@ -273,7 +276,7 @@ void drawKeyboard() {
     if (!hideKeyboard || frames < keyboardFrames) {
         DrawRectangle(0, keyboard.y, screenWidth, keyboard.height, GUI_COLOR(BASE_COLOR_DISABLED));
         DrawRectangleRec(keyboard, GUI_COLOR(BASE_COLOR_DISABLED));
-        const int nRows = sizeof(qwertyLayout.rows)/sizeof(int);
+        const int nRows = qwertyLayout.nRows;
         for (int row = 0, i = 0; row < nRows; row++) {
             const float columnOffset = (qwertyLayout.rows[0]-qwertyLayout.rows[row])/2.0;
             for (int column = 0; column < qwertyLayout.rows[row]; column++, i++) {
@@ -286,7 +289,7 @@ void drawKeyboard() {
                 const int keyFontSize = keyRadius*0.67;
                 const int keyCharWidth = MeasureText(buf, keyFontSize);
 
-                const unsigned char transparency = Lerp(0, 255, qwertyLayout.frames[i]/(float)qwertyLayout.initialFrames);
+                const unsigned char transparency = Lerp(0, 255, qwertyLayout.frames[i]/(float)keyAnimationFrames);
                 if (qwertyLayout.keys[i] == KEY_SPACE) {
                     const int spacebarWidth = keyCharWidth * 30;
                     DrawCircleSector(

@@ -1,6 +1,9 @@
 #include "../raylib/include/raygui.h"
 #include <ctype.h>
 #include <GLFW/glfw3.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 // STATIC VARIABLES
 #define KEYBOARD_KEYS \
@@ -10,41 +13,62 @@ X(22, KEY_A, KEY_A) X(23, KEY_S, KEY_S) X(24, KEY_D, KEY_D) X(25, KEY_F, KEY_F) 
 X(33, KEY_Z, KEY_Z) X(34, KEY_X, KEY_X) X(35, KEY_C, KEY_C) X(36, KEY_V, KEY_V) X(37, KEY_B, KEY_B) X(38, KEY_N, KEY_N) X(39, KEY_M, KEY_M) X(40, KEY_COMMA, '<') X(41, KEY_PERIOD, '>')\
 X(42, KEY_SPACE, KEY_SPACE)
 
-struct {
-    KeyboardKey keys[
-        #define X(...) +1
-        KEYBOARD_KEYS
-        #undef X
-    ];
-    int shiftKeys[
-        #define X(...) +1
-        KEYBOARD_KEYS
-        #undef X
-    ];
-    int frames[
-        #define X(...) +1
-        KEYBOARD_KEYS
-        #undef X
-    ];
-    int rows[5];
-    int initialFrames;
-} qwertyLayout = {
-    .rows = { 12, 10, 11, 9, 1 },
-    .keys = {
+typedef struct {
+    int *keys;
+    int *shiftKeys;
+    int *frames;
+    int *rows;
+    int nRows, nKeys;
+} KeyboardLayout;
+
+KeyboardLayout qwertyLayout;
+
+const int keyAnimationFrames = 10;
+
+void initKeyboardLayouts() {
+    int keys[] = {
         #define X(i, key, shift) key,
         KEYBOARD_KEYS
         #undef X
-    },
-    .shiftKeys = {
+    };
+    int shiftKeys[] = {
         #define X(i, key, shift) shift,
         KEYBOARD_KEYS
         #undef X
-    },
-    .frames = { },
-    .initialFrames = 10
-};
+    };
+    qwertyLayout.nKeys = 
+        #define X(...) +1
+        KEYBOARD_KEYS
+        #undef X
+    ;
+    int frames[] = {
+        #define X(...) 0,
+        KEYBOARD_KEYS
+        #undef X
+    };
+    int rows[] = { 12, 10, 11, 9, 1 };
+    qwertyLayout.nRows = sizeof(rows)/sizeof(int);
+    int *arena = malloc(sizeof(int)*(qwertyLayout.nKeys*3 + qwertyLayout.nKeys));
+    int *ptr = arena;
 
-int getKeysIndex(KeyboardKey key) {
+    #define INIT_KEYBOARD(ptr, layout, property, length) \
+        layout.property = ptr; \
+        ptr += length; \
+        memcpy(layout.property, property, sizeof(int)*length); \
+
+    INIT_KEYBOARD(ptr, qwertyLayout, keys, qwertyLayout.nKeys);
+    INIT_KEYBOARD(ptr, qwertyLayout, shiftKeys, qwertyLayout.nKeys);
+    INIT_KEYBOARD(ptr, qwertyLayout, frames, qwertyLayout.nKeys);
+    INIT_KEYBOARD(ptr, qwertyLayout, rows, qwertyLayout.nKeys);
+
+    #undef INIT_KEYBOARD
+}
+
+void freeKeyboardLayouts() {
+    free(qwertyLayout.keys);
+}
+
+int getKeysIndex(int key) {
     switch (key) {
         #define X(i, name, shift) case name: return i;
         KEYBOARD_KEYS
@@ -52,7 +76,7 @@ int getKeysIndex(KeyboardKey key) {
         default: return -1;
     }
 }
-int getKeyShift(KeyboardKey key) {
+int getKeyShift(int key) {
     int i = getKeysIndex(key);
     if (i == -1) return -1;
     return qwertyLayout.shiftKeys[i];
@@ -68,10 +92,10 @@ int getKeyNoShift(int c) {
     return -1;
 }
 
-void keyResetFrames(KeyboardKey key) {
+void keyResetFrames(int key) {
     int i = getKeysIndex(getKeyNoShift(key));
     if (i == -1) return;
-    qwertyLayout.frames[i] = qwertyLayout.initialFrames;
+    qwertyLayout.frames[i] = keyAnimationFrames;
 }
 
 // Figure out wether the caps lock is active or not using GLFW, based on the previous state.
