@@ -281,12 +281,12 @@ void drawKeyboard() {
                     keyboard.y + padding + keyRadius + row * (keyRadius*2 + padding)
                 };
 
-                char buf[] = {(char) layouts[layout].keys[i], '\0'};
+                char buf[] = {(char) layouts[layout].keys[i].normal, '\0'};
                 const int keyFontSize = keyRadius*0.67;
                 const int keyCharWidth = MeasureText(buf, keyFontSize);
 
                 const unsigned char transparency = Lerp(0, 255, layouts[layout].frames[i]/(float)keyAnimationFrames);
-                if (layouts[layout].keys[i] == KEY_SPACE) {
+                if (layouts[layout].keys[i].normal == KEY_SPACE) {
                     const int spacebarWidth = keyCharWidth * 30;
                     DrawCircleSector(
                         Vector2Add(center, (Vector2) {-spacebarWidth/2.0, 0}), keyRadius,
@@ -311,10 +311,10 @@ void drawKeyboard() {
                 } else {
                     DrawCircleV(center, keyRadius, TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - transparency));
                     // printf("%c, %c\n", layout->keys[i], layout->shiftKeys[i]);
-                    if ((int)layouts[layout].keys[i] == layouts[layout].shiftKeys[i]) {
+                    if ((int)layouts[layout].keys[i].normal == layouts[layout].keys[i].shift) {
                         DrawText(buf, center.x - keyCharWidth/(float)2, center.y - keyFontSize/(float)2, keyFontSize, GUI_COLOR(TEXT_COLOR_NORMAL));
                     } else {
-                        char shiftBuf[2] = ""; shiftBuf[0] = layouts[layout].shiftKeys[i];
+                        char shiftBuf[2] = ""; shiftBuf[0] = layouts[layout].keys[i].shift;
                         const float shiftCharWidth = MeasureText(shiftBuf, keyFontSize);
                         DrawText(shiftBuf, center.x - shiftCharWidth/(float)2, center.y - keyFontSize, keyFontSize, GUI_COLOR(TEXT_COLOR_NORMAL));
                         DrawText(buf, center.x - keyCharWidth/(float)2, center.y, keyFontSize, GUI_COLOR(TEXT_COLOR_NORMAL));
