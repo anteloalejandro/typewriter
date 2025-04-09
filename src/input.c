@@ -27,11 +27,8 @@ typedef struct {
     int nRows, nKeys;
 } KeyboardLayout;
 
-enum Layouts { QWERTY = 0, BASIC };
-KeyboardLayout qwertyLayout;
-KeyboardLayout basicLayout;
-KeyboardLayout *layouts[] = {&qwertyLayout, &basicLayout};
-enum Layouts layout = QWERTY;
+enum { QWERTY = 0, BASIC } layout = QWERTY;
+KeyboardLayout layouts[2];
 
 const int keyAnimationFrames = 10;
 
@@ -58,18 +55,18 @@ void initKeyboardLayouts() {
             #undef X
         };
         int rows[] = { 12, 10, 11, 9, 1 };
-        qwertyLayout.nKeys = 
+        layouts[0].nKeys = 
             #define X(...) +1
             QWERTY_KEYS
             #undef X
         ;
-        qwertyLayout.nRows = sizeof(rows)/sizeof(int);
+        layouts[0].nRows = sizeof(rows)/sizeof(int);
 
-        int *arena = malloc(sizeof(int)*(qwertyLayout.nKeys*3 + qwertyLayout.nKeys));
-        INIT_KEYBOARD_PROP(arena, qwertyLayout, keys, qwertyLayout.nKeys);
-        INIT_KEYBOARD_PROP(arena, qwertyLayout, shiftKeys, qwertyLayout.nKeys);
-        INIT_KEYBOARD_PROP(arena, qwertyLayout, frames, qwertyLayout.nKeys);
-        INIT_KEYBOARD_PROP(arena, qwertyLayout, rows, qwertyLayout.nRows);
+        int *arena = malloc(sizeof(int)*(layouts[0].nKeys*3 + layouts[0].nKeys));
+        INIT_KEYBOARD_PROP(arena, layouts[0], keys, layouts[0].nKeys);
+        INIT_KEYBOARD_PROP(arena, layouts[0], shiftKeys, layouts[0].nKeys);
+        INIT_KEYBOARD_PROP(arena, layouts[0], frames, layouts[0].nKeys);
+        INIT_KEYBOARD_PROP(arena, layouts[0], rows, layouts[0].nRows);
     }
 
     {
@@ -89,26 +86,27 @@ void initKeyboardLayouts() {
             #undef X
         };
         int rows[] = { 10, 10, 9, 7, 1 };
-        basicLayout.nKeys = 
+        layouts[1].nKeys = 
             #define X(...) +1
             BASIC_KEYS
             #undef X
         ;
-        basicLayout.nRows = sizeof(rows)/sizeof(int);
+        layouts[1].nRows = sizeof(rows)/sizeof(int);
 
-        int *arena = malloc(sizeof(int)*(basicLayout.nKeys*3 + basicLayout.nKeys));
-        INIT_KEYBOARD_PROP(arena, basicLayout, keys, basicLayout.nKeys);
-        INIT_KEYBOARD_PROP(arena, basicLayout, shiftKeys, basicLayout.nKeys);
-        INIT_KEYBOARD_PROP(arena, basicLayout, frames, basicLayout.nKeys);
-        INIT_KEYBOARD_PROP(arena, basicLayout, rows, basicLayout.nRows);
+        int *arena = malloc(sizeof(int)*(layouts[1].nKeys*3 + layouts[1].nKeys));
+        INIT_KEYBOARD_PROP(arena, layouts[1], keys, layouts[1].nKeys);
+        INIT_KEYBOARD_PROP(arena, layouts[1], shiftKeys, layouts[1].nKeys);
+        INIT_KEYBOARD_PROP(arena, layouts[1], frames, layouts[1].nKeys);
+        INIT_KEYBOARD_PROP(arena, layouts[1], rows, layouts[1].nRows);
     }
 
     #undef INIT_KEYBOARD_PROP
 }
 
 void freeKeyboardLayouts() {
-    free(qwertyLayout.keys);
-    free(basicLayout.keys);
+    for (size_t i = 0; i < sizeof(layouts)/sizeof(KeyboardLayout); i++) {
+        free(layouts[i].keys);
+    }
 }
 
 int getKeysIndex(int key) {
@@ -136,7 +134,7 @@ int getKeysIndex(int key) {
 int getKeyShift(int key) {
     int i = getKeysIndex(key);
     if (i == -1) return -1;
-    return layouts[layout]->shiftKeys[i];
+    return layouts[layout].shiftKeys[i];
 }
 int getKeyNoShift(int c) {
     if (getKeysIndex(c) != -1) return c;
@@ -165,7 +163,7 @@ int getKeyNoShift(int c) {
 void keyResetFrames(int key) {
     int i = getKeysIndex(getKeyNoShift(key));
     if (i == -1) return;
-    layouts[layout]->frames[i] = keyAnimationFrames;
+    layouts[layout].frames[i] = keyAnimationFrames;
 }
 
 // Figure out wether the caps lock is active or not using GLFW, based on the previous state.
@@ -192,14 +190,16 @@ bool isCapsLockActive() {
 
     return isActive;
 }
+void updateCapsLockState() {
+    isCapsLockActive();
+}
 
 int getForceLayoutKey() {
     int c = GetKeyPressed();
-    const bool caps_lock = isCapsLockActive(); 
     if (getKeysIndex(c) == -1) return -1;
     if (IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT)) {
         c = getKeyShift(c);
-    } else if (!caps_lock) {
+    } else if (!isCapsLockActive()) {
         c = tolower(c);
     }
     return c;
