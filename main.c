@@ -156,6 +156,14 @@ void handleInput() {
                 cursorPos.x--;
             }
         }
+        if (IsKeyPressed(KEY_TAB)) {
+            const int tabSize = 8;
+            const int afterTabSize = cursorPos.x % tabSize;
+            cursorPos.x += tabSize - afterTabSize;
+            if (cursorPos.x >= line->length) {
+                cursorPos.x = line->length-1;
+            }
+        }
     }
 }
 
@@ -303,6 +311,14 @@ void drawKeyboard() {
                     const int spacebarWidth = keyCharWidth * 30;
                     xOffset += spacebarWidth;
                     drawKey("SPACE", NULL, center, keyFontSize, spacebarWidth, TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - transparency));
+                } else if (layouts[layout].keys[i].normal == KEY_TAB) {
+                    const int tabWidth = keyCharWidth * 2;
+                    xOffset += tabWidth;
+                    drawKey("Tab", NULL, center, keyFontSize, tabWidth, TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - transparency));
+                } else if (layouts[layout].keys[i].normal == KEY_BACKSPACE) {
+                    const int tabWidth = keyCharWidth * 2;
+                    xOffset += tabWidth;
+                    drawKey("<-", NULL, center, keyFontSize, tabWidth, TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - transparency));
                 } else {
                     char shiftBuf[2] = " ";
                     shiftBuf[0] = layouts[layout].keys[i].normal == layouts[layout].keys[i].shift ? '\0' : layouts[layout].keys[i].shift;

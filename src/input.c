@@ -19,13 +19,13 @@ KeyboardLayout layouts[] = {
     {
         .keys = {
             {KEY_ONE, '!'}, {KEY_TWO, '@'}, {KEY_THREE, '#'}, {KEY_FOUR, '$'}, {KEY_FIVE, '%'}, {KEY_SIX, '^'}, {KEY_SEVEN, '&'}, {KEY_EIGHT, '*'}, {KEY_NINE, '('}, {KEY_ZERO, ')'}, {KEY_MINUS, '_'}, {KEY_EQUAL, '+'},
-            {KEY_Q, KEY_Q}, {KEY_W, KEY_W}, {KEY_E, KEY_E}, {KEY_R, KEY_R}, {KEY_T, KEY_T}, {KEY_Y, KEY_Y}, {KEY_U, KEY_U}, {KEY_I, KEY_I}, {KEY_O, KEY_O}, {KEY_P, KEY_P},
+            {KEY_TAB, KEY_TAB}, {KEY_Q, KEY_Q}, {KEY_W, KEY_W}, {KEY_E, KEY_E}, {KEY_R, KEY_R}, {KEY_T, KEY_T}, {KEY_Y, KEY_Y}, {KEY_U, KEY_U}, {KEY_I, KEY_I}, {KEY_O, KEY_O}, {KEY_P, KEY_P},
             {KEY_A, KEY_A}, {KEY_S, KEY_S}, {KEY_D, KEY_D}, {KEY_F, KEY_F}, {KEY_G, KEY_G}, {KEY_H, KEY_H}, {KEY_J, KEY_J}, {KEY_K, KEY_K}, {KEY_L, KEY_L}, {KEY_SEMICOLON, ':'}, {KEY_APOSTROPHE, '"'},
             {KEY_Z, KEY_Z}, {KEY_X, KEY_X}, {KEY_C, KEY_C}, {KEY_V, KEY_V}, {KEY_B, KEY_B}, {KEY_N, KEY_N}, {KEY_M, KEY_M}, {KEY_COMMA, '<'}, {KEY_PERIOD, '>'},
             {KEY_SPACE, KEY_SPACE},
         },
         .frames = {},
-        .rows = { 12, 10, 11, 9, 1 },
+        .rows = { 12, 11, 11, 9, 1 },
         .nRows = 5
     },
     {

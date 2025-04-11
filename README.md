@@ -39,7 +39,7 @@ sudo pacman -S glfw
 
 - [ ] **Typing like you'd do in a typewritter**
   - [x] Tabs, space and backspace only move the cursor
-  - [x] Enter jumps to a new line, but it does not act like a CR
+  - ~[x] Enter jumps to a new line, but it does not act like a CR~
   - [x] Carriage Return key
   - [x] Key to delete text as if the typewritter had a type with corrector fluid.
   Deleting won't be visually perfect and may take multiple keystrokes
