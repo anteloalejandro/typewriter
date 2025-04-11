@@ -239,6 +239,34 @@ void drawPage() {
     }
 }
 
+void drawKey(const char *normal, const char *shift, Vector2 center, int fontSize, int extraWidth, Color bgColor) {
+    DrawCircleSector(
+        Vector2Add(center, (Vector2) {-extraWidth, 0}), keyRadius,
+        90, 270, 20, /* Left semicircle */
+        bgColor
+    );
+    DrawCircleSector(
+        Vector2Add(center, (Vector2) {extraWidth, 0}), keyRadius,
+        270, 450, 20, /* Right semicircle */
+        bgColor
+    );
+    DrawRectangle(
+        center.x - extraWidth, center.y - keyRadius,
+        extraWidth*2, keyRadius*2,
+        bgColor
+    );
+    if (shift == NULL || *shift == '\0') {
+        DrawText(
+            normal,
+            center.x - MeasureText(normal, fontSize)/2.0, center.y - fontSize/2.0,
+            fontSize, GUI_COLOR(TEXT_COLOR_NORMAL)
+        );
+    } else {
+        DrawText(shift, center.x - MeasureText(shift, fontSize)/2.0, center.y - fontSize, fontSize, GUI_COLOR(TEXT_COLOR_NORMAL));
+        DrawText(normal, center.x - MeasureText(normal, fontSize)/2.0, center.y, fontSize, GUI_COLOR(TEXT_COLOR_NORMAL));
+    }
+}
+
 void drawKeyboard() {
     static int frames = 0;
     const int keyboardFrames = 5;
@@ -274,37 +302,11 @@ void drawKeyboard() {
                 if (layouts[layout].keys[i].normal == KEY_SPACE) {
                     const int spacebarWidth = keyCharWidth * 30;
                     xOffset += spacebarWidth;
-                    DrawCircleSector(
-                        Vector2Add(center, (Vector2) {-spacebarWidth, 0}), keyRadius,
-                        90, 270, 20, /* Left semicircle */
-                        TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - transparency)
-                    );
-                    DrawCircleSector(
-                        Vector2Add(center, (Vector2) {spacebarWidth, 0}), keyRadius,
-                        270, 450, 20, /* Right semicircle */
-                        TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - transparency)
-                    );
-                    DrawRectangle(
-                        center.x - spacebarWidth, center.y - keyRadius,
-                        spacebarWidth*2, keyRadius*2,
-                        TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - transparency)
-                    );
-                    DrawText(
-                        "SPACE",
-                        center.x - MeasureText("SPACE", keyFontSize)/2.0, center.y - keyFontSize/2.0,
-                        keyFontSize, GUI_COLOR(TEXT_COLOR_NORMAL)
-                    );
+                    drawKey("SPACE", NULL, center, keyFontSize, spacebarWidth, TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - transparency));
                 } else {
-                    DrawCircleV(center, keyRadius, TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - transparency));
-                    // printf("%c, %c\n", layout->keys[i], layout->shiftKeys[i]);
-                    if ((int)layouts[layout].keys[i].normal == layouts[layout].keys[i].shift) {
-                        DrawText(buf, center.x - keyCharWidth/(float)2, center.y - keyFontSize/(float)2, keyFontSize, GUI_COLOR(TEXT_COLOR_NORMAL));
-                    } else {
-                        char shiftBuf[2] = ""; shiftBuf[0] = layouts[layout].keys[i].shift;
-                        const float shiftCharWidth = MeasureText(shiftBuf, keyFontSize);
-                        DrawText(shiftBuf, center.x - shiftCharWidth/(float)2, center.y - keyFontSize, keyFontSize, GUI_COLOR(TEXT_COLOR_NORMAL));
-                        DrawText(buf, center.x - keyCharWidth/(float)2, center.y, keyFontSize, GUI_COLOR(TEXT_COLOR_NORMAL));
-                    }
+                    char shiftBuf[2] = " ";
+                    shiftBuf[0] = layouts[layout].keys[i].normal == layouts[layout].keys[i].shift ? '\0' : layouts[layout].keys[i].shift;
+                    drawKey(buf, shiftBuf, center, keyFontSize, 0, TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - transparency));
                 }
 
                 layouts[layout].frames[i] -= layouts[layout].frames[i] == 0 ? 0 : 1;
