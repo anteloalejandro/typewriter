@@ -25,7 +25,7 @@ KeyboardLayout layouts[] = {
             {KEY_SPACE, KEY_SPACE},
         },
         .frames = {},
-        .rows = { 12, 10, 11, 9, 1  },
+        .rows = { 12, 10, 11, 9, 1 },
         .nRows = 5
     },
     {
@@ -43,10 +43,6 @@ KeyboardLayout layouts[] = {
 };
 
 const int keyAnimationFrames = 10;
-
-void initKeyboardLayouts() { }
-
-void freeKeyboardLayouts() { }
 
 // TODO: fill map of keys to an index the first time it's run (maybe just each time it misses?)
 int getKeysIndex(int key) {

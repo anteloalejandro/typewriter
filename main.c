@@ -29,19 +29,17 @@
 #define TRANSPARENTIZE(color, alpha) CLITERAL(Color) {color.r, color.g, color.b, alpha}
 
 struct FontItem {
-    char *name;
     char *path;
     int fontSize;
 } fonts[] = {
-    { "Ubuntu Mono", "resources/UbuntuMono-R.ttf", 20 },
-    { "Courier New", "resources/cour.ttf", 20 },
+    { "resources/UbuntuMono-R.ttf", 20 },
+    { "resources/cour.ttf", 20 },
 };
 struct ThemeItem {
-    char *name;
     char *path;
 } themes[] = {
-    { "Light", NULL },
-    { "Dark", "resources/style_dark.rgs" }
+    { NULL },
+    { "resources/style_dark.rgs" }
 };
 
 int screenWidth = 1200;
@@ -68,9 +66,6 @@ Rectangle keyboard;
 Str *lines = NULL;
 FloatingCharList fchars = { NULL, 0 };
 
-char fontDropdownBuf[64] = "";
-char themeDropdownBuf[64] = "";
-
 // reloads the font after GuiLoadStyle breaks it.
 void setTheme(char *theme, char *font, int fontSize) {
     if (theme == NULL) {
@@ -90,8 +85,6 @@ void init() {
     SetRandomSeed(time(NULL));
 
     setTheme(themes[0].path, fonts[0].path, fonts[0].fontSize);
-
-    initKeyboardLayouts();
 
     cursorPos = (Position) {0, 0};
     fchars = (FloatingCharList) { NULL, 0 };
@@ -124,26 +117,11 @@ void init() {
         Str_append(lines+i, buf, cols);
     }
 
-    int n = sizeof(fonts)/sizeof(struct FontItem);
-    for (int i = 0; i < n && i < (int)sizeof(fontDropdownBuf); i++) {
-        strcat(fontDropdownBuf, fonts[i].name);
-        strcat(fontDropdownBuf, "\n");
-    }
-    fontDropdownBuf[strlen(fontDropdownBuf)-1] = '\0';
-
-
-    n = sizeof(themes)/sizeof(struct ThemeItem);
-    for (int i = 0; i < n && i < (int)sizeof(themeDropdownBuf); i++) {
-        strcat(themeDropdownBuf, themes[i].name);
-        strcat(themeDropdownBuf, "\n");
-    }
-    themeDropdownBuf[strlen(themeDropdownBuf)-1] = '\0';
 }
 
 void closeAndFree() {
     for (int i = 0; i < rows; i++) Str_destroy(lines+i);
     free(lines);
-    freeKeyboardLayouts();
     FloatingCharList_destroy(&fchars);
     UnloadFont(data.font);
 }
@@ -273,11 +251,18 @@ void drawKeyboard() {
         DrawRectangle(0, keyboard.y, screenWidth, keyboard.height, GUI_COLOR(BASE_COLOR_DISABLED));
         DrawRectangleRec(keyboard, GUI_COLOR(BASE_COLOR_DISABLED));
         const int nRows = layouts[layout].nRows;
+        int longestRowSize = 0;
+        for (int i = 0; i < nRows; i++) {
+            if (layouts[layout].rows[i] > longestRowSize)
+                longestRowSize = layouts[layout].rows[i];
+        }
         for (int row = 0, i = 0; row < nRows; row++) {
-            const float columnOffset = (layouts[layout].rows[0]-layouts[layout].rows[row])/2.0;
+            // columnOffset is used to center rows shorter longest
+            const float columnOffset = (longestRowSize-layouts[layout].rows[row])/2.0;
+            float xOffset = 0;
             for (int column = 0; column < layouts[layout].rows[row]; column++, i++) {
                 Vector2 center = (Vector2) {
-                    keyboard.x + padding + keyRadius + (column+columnOffset) * (keyRadius*2 + padding),
+                    keyboard.x + xOffset + padding + keyRadius + (column+columnOffset) * (keyRadius*2 + padding),
                     keyboard.y + padding + keyRadius + row * (keyRadius*2 + padding)
                 };
 
@@ -288,19 +273,20 @@ void drawKeyboard() {
                 const unsigned char transparency = Lerp(0, 255, layouts[layout].frames[i]/(float)keyAnimationFrames);
                 if (layouts[layout].keys[i].normal == KEY_SPACE) {
                     const int spacebarWidth = keyCharWidth * 30;
+                    xOffset += spacebarWidth;
                     DrawCircleSector(
-                        Vector2Add(center, (Vector2) {-spacebarWidth/2.0, 0}), keyRadius,
+                        Vector2Add(center, (Vector2) {-spacebarWidth, 0}), keyRadius,
                         90, 270, 20, /* Left semicircle */
                         TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - transparency)
                     );
                     DrawCircleSector(
-                        Vector2Add(center, (Vector2) {spacebarWidth/2.0, 0}), keyRadius,
+                        Vector2Add(center, (Vector2) {spacebarWidth, 0}), keyRadius,
                         270, 450, 20, /* Right semicircle */
                         TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - transparency)
                     );
                     DrawRectangle(
-                        center.x - spacebarWidth/2.0, center.y - keyRadius,
-                        spacebarWidth, keyRadius*2,
+                        center.x - spacebarWidth, center.y - keyRadius,
+                        spacebarWidth*2, keyRadius*2,
                         TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - transparency)
                     );
                     DrawText(
@@ -381,7 +367,7 @@ void drawSettings() {
         prevItem = selectedFont;
         const bool itemChanged = GuiDropdownBox(
             (Rectangle) {settingsX+padding, getAndIncrement(&y, 30*3 + padding), settingsWidth-padding*2, 30},
-            fontDropdownBuf, &selectedFont, true
+            "Ubuntu Mono\nCourier New", &selectedFont, true
         );
         if (itemChanged && prevItem != selectedFont) setFont(fonts[selectedFont].path, fonts[selectedFont].fontSize);
         selectedFont = selectedFont;
@@ -395,7 +381,7 @@ void drawSettings() {
         prevItem = item;
         const bool itemChanged = GuiDropdownBox(
             (Rectangle) {settingsX+padding, getAndIncrement(&y, 30*3 + padding), settingsWidth-padding*2, 30},
-            themeDropdownBuf, &item, true
+            "Light\nDark", &item, true
         );
         if (itemChanged && prevItem != item)
             setTheme(themes[item].path, fonts[selectedFont].path, fonts[selectedFont].fontSize);
