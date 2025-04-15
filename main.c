@@ -3,7 +3,6 @@
 #include <ctype.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <string.h>
 #include <time.h>
 #include "headers/shared.h"
 #include "src/floatingchars.c"
@@ -22,6 +21,7 @@
 #define UNPACK_RECT_PAD(rect, n)                 \
     (rect).x - (n), (rect).y - (n),              \
     (rect).width + (n)*2, (rect).height + (n)*2
+#define UNPACK_VECTOR2(v) (v).x, (v).y
 #define VECTOR2(shape) CLITERAL(Vector2) { (shape.x), (shape.y) }
 #define TRI_TO_RECT(tri) CLITERAL(Rectangle) {carret.x, carret.y, carret.c.x, carret.b.y}
 #define GUI_COLOR(color) GetColor(GuiGetStyle(DEFAULT, color))
@@ -46,7 +46,7 @@ int screenWidth = 1200;
 int screenHeight = 800;
 
 bool showSettings = false;
-bool forceLayout = true;
+bool emulateLayout = true;
 bool hideKeyboard = false;
 bool enableOverlapping = true;
 
@@ -116,7 +116,6 @@ void init() {
         snprintf(buf, cols, "%*s", cols, "");
         Str_append(lines+i, buf, cols);
     }
-
 }
 
 void closeAndFree() {
@@ -131,8 +130,8 @@ void handleInput() {
     if (!showSettings) {
         Str *line = lines + cursorPos.y;
         int key = '\0';
-        while ((key = (forceLayout ? getForceLayoutKey() : GetCharPressed())) > 0) {
-            if ((key >= 33) && (key <= 125) && fitsInRect(cursorPos.x, padding, container)) {
+        while ((key = (emulateLayout ? getEmulatedKey() : GetCharPressed())) > 0) {
+            if ((key >= 33) && (key <= 126) && fitsInRect(cursorPos.x, padding, container)) {
                 if (line->str[cursorPos.x] != ' ') {
                     FloatingCharList_insert(&fchars, line->str[cursorPos.x], cursorPos);
                 }
@@ -140,7 +139,6 @@ void handleInput() {
             }
             keyResetFrames(toupper(key));
         }
-
 
         if (IsKeyPressed(KEY_SPACE) && fitsInRect(cursorPos.x, padding, container)) {
             cursorPos.x++;
@@ -160,10 +158,14 @@ void handleInput() {
             const int tabSize = 8;
             const int afterTabSize = cursorPos.x % tabSize;
             cursorPos.x += tabSize - afterTabSize;
-            if (cursorPos.x >= line->length) {
+            if (!fitsInRect(cursorPos.x, padding, container))
                 cursorPos.x = line->length-1;
-            }
         }
+        if (isCapsLockActive()) {
+            keyResetFrames(KEY_CAPS_LOCK);
+        }
+        if (IsKeyDown(KEY_LEFT_SHIFT)) keyResetFrames(KEY_LEFT_SHIFT);
+        if (IsKeyDown(KEY_RIGHT_SHIFT)) keyResetFrames(KEY_RIGHT_SHIFT);
     }
 }
 
@@ -211,12 +213,12 @@ void updatePositions() {
 
     container.x = (cursor.x - padding) - (textSize(cursorPos.x, HORIZONTAL));
     container.y = (cursor.y - padding) - (textSize(cursorPos.y, VERTICAL));
-    carret.x = container.x - border - padding - data.fontSize/(float)2,
-        carret.y = cursor.y;
+    carret.x = container.x - border - padding - data.fontSize/(float)2;
+    carret.y = cursor.y;
 
     keyboard.height = (keyRadius*2 + padding) * layouts[layout].nRows + padding,
-    keyboard.width = (keyRadius*2 + padding) * layouts[layout].rows[0] + padding,
-    keyboard.x = (screenWidth - keyboard.width)/2;
+    keyboard.width = screenWidth;
+    keyboard.x = (screenWidth - keyboard.width)/2.0;
     keyboard.y = screenHeight - keyboard.height;
 }
 
@@ -247,20 +249,20 @@ void drawPage() {
     }
 }
 
-void drawKey(const char *normal, const char *shift, Vector2 center, int fontSize, int extraWidth, Color bgColor) {
+void drawKeyEx(const char *normal, const char *shift, Vector2 center, int fontSize, float extraWidth, Color bgColor) {
     DrawCircleSector(
-        Vector2Add(center, (Vector2) {-extraWidth, 0}), keyRadius,
+        Vector2Add(center, (Vector2) {-extraWidth/2.0, 0}), keyRadius,
         90, 270, 20, /* Left semicircle */
         bgColor
     );
     DrawCircleSector(
-        Vector2Add(center, (Vector2) {extraWidth, 0}), keyRadius,
+        Vector2Add(center, (Vector2) {extraWidth/2.0, 0}), keyRadius,
         270, 450, 20, /* Right semicircle */
         bgColor
     );
     DrawRectangle(
-        center.x - extraWidth, center.y - keyRadius,
-        extraWidth*2, keyRadius*2,
+        center.x - extraWidth/2.0, center.y - keyRadius,
+        extraWidth, keyRadius*2,
         bgColor
     );
     if (shift == NULL || *shift == '\0') {
@@ -275,17 +277,62 @@ void drawKey(const char *normal, const char *shift, Vector2 center, int fontSize
     }
 }
 
+float keyExtraWidth(int key, int fontSize) {
+    float keyWidth = MeasureText("M", fontSize);
+    switch (key) {
+        case KEY_SPACE: return keyWidth * 30;
+        case KEY_TAB: return keyWidth * 2;
+        case KEY_BACKSPACE: return keyWidth * 8;
+        case KEY_LEFT_SHIFT: case KEY_RIGHT_SHIFT: return keyWidth * 4;
+        case KEY_CAPS_LOCK: return keyWidth * 8;
+        default: return 0;
+    }
+}
+
+void drawKey(int keyIdx, Vector2 center, int fontSize, unsigned char transparency) {
+    // const char keyCharWidth = 0;
+    const int normal = layouts[layout].keys[keyIdx].normal;
+    const int shift = layouts[layout].keys[keyIdx].shift;
+
+    // char text[16] = {};
+    const float extraWidth = keyExtraWidth(normal, fontSize);
+
+    switch (normal) {
+        case KEY_SPACE: {
+            drawKeyEx("SPACE", NULL, center, fontSize, extraWidth, TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - transparency));
+        } break;
+        case KEY_TAB: {
+            drawKeyEx("Tab", NULL, center, fontSize, extraWidth, TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - transparency));
+        } break;
+        case KEY_BACKSPACE: {
+            drawKeyEx("Backspace", NULL, center, fontSize, extraWidth, TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - transparency));
+        } break;
+        case KEY_LEFT_SHIFT: case KEY_RIGHT_SHIFT: {
+            drawKeyEx("Shift", NULL, center, fontSize, extraWidth, TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - transparency));
+        } break;
+        case KEY_CAPS_LOCK: {
+            drawKeyEx("Caps Lock", NULL, center, fontSize, extraWidth, TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - transparency));
+        } break;
+        default: {
+            char normalBuf[] = {(char) normal, '\0'};
+            char shiftBuf[2] = {(char) (normal == shift ? '\0' : shift), '\0'};
+            drawKeyEx(normalBuf, shiftBuf, center, fontSize, extraWidth, TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - transparency));
+        } break;
+    }
+}
+
+// TODO: calculate ahead of time the length of each row to allow long keys at the end
 void drawKeyboard() {
+    // hide/show keyboard
     static int frames = 0;
     const int keyboardFrames = 5;
     if (hideKeyboard) frames++;
     else frames--;
     frames = Clamp(frames, 0, keyboardFrames);
-
     keyboard.y = Lerp(screenHeight-keyboard.height, screenHeight, frames/(float)keyboardFrames);
+
     if (!hideKeyboard || frames < keyboardFrames) {
         DrawRectangle(0, keyboard.y, screenWidth, keyboard.height, GUI_COLOR(BASE_COLOR_DISABLED));
-        DrawRectangleRec(keyboard, GUI_COLOR(BASE_COLOR_DISABLED));
         const int nRows = layouts[layout].nRows;
         int longestRowSize = 0;
         for (int i = 0; i < nRows; i++) {
@@ -293,37 +340,25 @@ void drawKeyboard() {
                 longestRowSize = layouts[layout].rows[i];
         }
         for (int row = 0, i = 0; row < nRows; row++) {
-            // columnOffset is used to center rows shorter longest
-            const float columnOffset = (longestRowSize-layouts[layout].rows[row])/2.0;
-            float xOffset = 0;
+            const int keyFontSize = keyRadius*0.67;
+            float centerRelative[layouts[layout].rows[row]] = {};
+            float rowWidth = 0;
+            for (int column = 0; column < layouts[layout].rows[row]; column++) {
+                int idx = i + column;
+                const float keyWidth = keyRadius*2 + keyExtraWidth(layouts[layout].keys[idx].normal, keyFontSize);
+                centerRelative[column] = rowWidth + padding + keyWidth/2.0;
+                rowWidth = rowWidth + padding + keyWidth;
+            }
+            float rowBaseX = (screenWidth - rowWidth) / 2.0;
+
             for (int column = 0; column < layouts[layout].rows[row]; column++, i++) {
                 Vector2 center = (Vector2) {
-                    keyboard.x + xOffset + padding + keyRadius + (column+columnOffset) * (keyRadius*2 + padding),
+                    rowBaseX + centerRelative[column],
                     keyboard.y + padding + keyRadius + row * (keyRadius*2 + padding)
                 };
 
-                char buf[] = {(char) layouts[layout].keys[i].normal, '\0'};
-                const int keyFontSize = keyRadius*0.67;
-                const int keyCharWidth = MeasureText(buf, keyFontSize);
-
                 const unsigned char transparency = Lerp(0, 255, layouts[layout].frames[i]/(float)keyAnimationFrames);
-                if (layouts[layout].keys[i].normal == KEY_SPACE) {
-                    const int spacebarWidth = keyCharWidth * 30;
-                    xOffset += spacebarWidth;
-                    drawKey("SPACE", NULL, center, keyFontSize, spacebarWidth, TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - transparency));
-                } else if (layouts[layout].keys[i].normal == KEY_TAB) {
-                    const int tabWidth = keyCharWidth * 2;
-                    xOffset += tabWidth;
-                    drawKey("Tab", NULL, center, keyFontSize, tabWidth, TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - transparency));
-                } else if (layouts[layout].keys[i].normal == KEY_BACKSPACE) {
-                    const int tabWidth = keyCharWidth * 2;
-                    xOffset += tabWidth;
-                    drawKey("<-", NULL, center, keyFontSize, tabWidth, TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - transparency));
-                } else {
-                    char shiftBuf[2] = " ";
-                    shiftBuf[0] = layouts[layout].keys[i].normal == layouts[layout].keys[i].shift ? '\0' : layouts[layout].keys[i].shift;
-                    drawKey(buf, shiftBuf, center, keyFontSize, 0, TRANSPARENTIZE(GUI_COLOR(BACKGROUND_COLOR), 255 - transparency));
-                }
+                drawKey(i, center, keyFontSize, transparency);
 
                 layouts[layout].frames[i] -= layouts[layout].frames[i] == 0 ? 0 : 1;
             }
@@ -359,8 +394,8 @@ void drawSettings() {
     DrawText("General Settings", settingsX+padding, getAndIncrement(&y, 20+padding), 20, GUI_COLOR(BACKGROUND_COLOR));
     GuiToggle(
         (Rectangle) {settingsX+padding, getAndIncrement(&y, 30+padding), settingsWidth-padding*2, 30},
-        GUI_TOGGLE_TEXT(forceLayout, "Force Typewriter Layout"),
-        &forceLayout
+        GUI_TOGGLE_TEXT(emulateLayout, "Emulate Qwerty Layout"),
+        &emulateLayout
     );
     GuiToggle(
         (Rectangle) {settingsX+padding, getAndIncrement(&y, 30+padding), settingsWidth-padding*2, 30},
@@ -387,8 +422,8 @@ void drawSettings() {
             (Rectangle) {settingsX+padding, getAndIncrement(&y, 30*3 + padding), settingsWidth-padding*2, 30},
             "Ubuntu Mono\nCourier New", &selectedFont, true
         );
-        if (itemChanged && prevItem != selectedFont) setFont(fonts[selectedFont].path, fonts[selectedFont].fontSize);
-        selectedFont = selectedFont;
+        if (itemChanged && prevItem != selectedFont)
+            setFont(fonts[selectedFont].path, fonts[selectedFont].fontSize);
     }
     y+=20;
 
@@ -415,8 +450,7 @@ void drawSettings() {
             (Rectangle) {settingsX+padding, getAndIncrement(&y, 30*3 + padding), settingsWidth-padding*2, 30},
             "QWERTY\nBASIC", &item, true
         );
-        if (itemChanged && prevItem != item)
-            layout = item;
+        if (itemChanged && prevItem != item) layout = item;
     }
 }
 
@@ -427,6 +461,9 @@ void drawDebugInfo() {
     DrawText("X", container.x+margin, margin, 10, color);
     DrawLine(container.x, 0, container.x, screenHeight, color);
     DrawText("Y", margin, container.y+margin, 10, color);
+    char pos[64] = {};
+    snprintf(pos, sizeof(pos), "%.2f, %.2f", UNPACK_VECTOR2(GetMousePosition()));
+    DrawText(pos, UNPACK_VECTOR2(Vector2Add(GetMousePosition(), (Vector2) {5,-5})), 10, color);
 }
 #endif /* ifdef DEBUG */
 
