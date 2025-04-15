@@ -1,6 +1,11 @@
 #include "../raylib/include/raygui.h"
 #include <ctype.h>
 #include <GLFW/glfw3.h>
+#include <stdbool.h>
+#include <stdio.h>
+
+#define MAX_KEYS 128
+#define BIGGEST_KEY KEY_KB_MENU
 
 typedef struct {
     int normal;
@@ -8,8 +13,8 @@ typedef struct {
 } KeyPair;
 
 typedef struct {
-    KeyPair keys[128];
-    int frames[128];
+    KeyPair keys[MAX_KEYS];
+    int frames[MAX_KEYS];
     int rows[7];
     int nRows;
 } KeyboardLayout;
@@ -42,14 +47,42 @@ KeyboardLayout layouts[] = {
     },
 };
 
+int normalLookupTable[sizeof(layouts)/sizeof(KeyboardLayout)][BIGGEST_KEY+1] = {}; // size of the largest key + 1, KEY_KP_EQUAL
+char shiftLookupTable[sizeof(layouts)/sizeof(KeyboardLayout)][BIGGEST_KEY+1] = {}; // size of the largest key + 1, KEY_KP_EQUAL
+
 const int keyAnimationFrames = 10;
 
-// TODO: fill map of keys to an index the first time it's run (maybe just each time it misses?)
-int getKeysIndex(int key) {
-    for (int i = 0; layouts[layout].keys[i].normal != 0; i++) {
-        if (layouts[layout].keys[i].normal == key) return i;
+void fillNormalLookupTable() {
+    int n = sizeof(layouts)/sizeof(KeyboardLayout);
+    for (int i = 0; i < n; i++) {
+        int normal;
+        for (int j = 0; j < MAX_KEYS && (normal = layouts[i].keys[j].normal) != 0; j++) {
+            normalLookupTable[i][normal] = j;
+        }
     }
-    return -1;
+}
+
+void fillShiftLookupTable() {
+    int n = sizeof(layouts)/sizeof(KeyboardLayout);
+    for (int i = 0; i < n; i++) {
+        int shift;
+        for (int j = 0; j < MAX_KEYS && (shift = layouts[i].keys[j].shift) != 0; j++) {
+            shiftLookupTable[i][shift] = j;
+        }
+    }
+}
+
+int getKeysIndex(int key) {
+    static bool filled = false;
+    if (!filled) {
+        fillNormalLookupTable();
+        filled = true;
+    }
+
+    if (key > BIGGEST_KEY) return -1;
+
+    const int normal = normalLookupTable[layout][key];
+    return normal ? normal : -1;
 }
 int getKeyShift(int key) {
     int i = getKeysIndex(key);
@@ -57,15 +90,25 @@ int getKeyShift(int key) {
     return layouts[layout].keys[i].shift;
 }
 int getKeyNormal(int c) {
-    for (int i = 0; layouts[layout].keys[i].normal != 0; i++) {
-        if (layouts[layout].keys[i].normal == c || layouts[layout].keys[i].shift == c)
-            return layouts[layout].keys[i].normal;
+    static bool filled = false;
+    if (!filled) {
+        fillShiftLookupTable();
+        filled = true;
     }
-    return -1;
+
+    int i = getKeysIndex(c);
+
+    if (i != -1) return c;
+    i = shiftLookupTable[layout][c];
+
+    if (i == 0) return -1;
+
+    return layouts[layout].keys[i].normal;
 }
 
 void keyResetFrames(int key) {
-    int i = getKeysIndex(getKeyNormal(key));
+    key = getKeyNormal(key);
+    int i = getKeysIndex(key);
     if (i == -1) return;
     layouts[layout].frames[i] = keyAnimationFrames;
 }
