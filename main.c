@@ -127,46 +127,45 @@ void closeAndFree() {
 
 void handleInput() {
     updateCapsLockState();
-    if (!showSettings) {
-        Str *line = lines + cursorPos.y;
-        int key = '\0';
-        while ((key = (emulateLayout ? getEmulatedKey() : GetCharPressed())) > 0) {
-            if ((key >= 33) && (key <= 126) && fitsInRect(cursorPos.x, padding, container)) {
-                if (line->str[cursorPos.x] != ' ') {
-                    FloatingCharList_insert(&fchars, line->str[cursorPos.x], cursorPos);
-                }
-                line->str[cursorPos.x++] = key;
-            }
-            keyResetFrames(toupper(key));
-        }
 
-        if (IsKeyPressed(KEY_SPACE) && fitsInRect(cursorPos.x, padding, container)) {
-            cursorPos.x++;
-        }
-        if (IsKeyPressed(KEY_BACKSPACE)) {
-            if (IsKeyDown(KEY_LEFT_CONTROL)) {
-                if (line->str[cursorPos.x] != ' ') {
-                    FloatingCharList_insert(&fchars, line->str[cursorPos.x], cursorPos);
-                    line->str[cursorPos.x] = ' ';
-                }
-                FloatingCharList_eraseAll(&fchars, cursorPos);
-            } else if (cursorPos.x > 0) {
-                cursorPos.x--;
+    if (showSettings) return;
+
+    Str *line = lines + cursorPos.y;
+    int key = '\0';
+    while ((key = (emulateLayout ? getEmulatedKey() : GetCharPressed())) > 0) {
+        if ((key >= 33) && (key <= 126) && fitsInRect(cursorPos.x, padding, container)) {
+            if (line->str[cursorPos.x] != ' ') {
+                FloatingCharList_insert(&fchars, line->str[cursorPos.x], cursorPos);
             }
+            line->str[cursorPos.x++] = key;
         }
-        if (IsKeyPressed(KEY_TAB)) {
-            const int tabSize = 8;
-            const int afterTabSize = cursorPos.x % tabSize;
-            cursorPos.x += tabSize - afterTabSize;
-            if (!fitsInRect(cursorPos.x, padding, container))
-                cursorPos.x = line->length-1;
-        }
-        if (isCapsLockActive()) {
-            keyResetFrames(KEY_CAPS_LOCK);
-        }
-        if (IsKeyDown(KEY_LEFT_SHIFT)) keyResetFrames(KEY_LEFT_SHIFT);
-        if (IsKeyDown(KEY_RIGHT_SHIFT)) keyResetFrames(KEY_RIGHT_SHIFT);
+        keyResetFrames(toupper(key));
     }
+
+    if (IsKeyPressed(KEY_SPACE) && fitsInRect(cursorPos.x, padding, container)) {
+        cursorPos.x++;
+    }
+    if (IsKeyPressed(KEY_BACKSPACE)) {
+        if (IsKeyDown(KEY_LEFT_CONTROL)) {
+            if (line->str[cursorPos.x] != ' ') {
+                FloatingCharList_insert(&fchars, line->str[cursorPos.x], cursorPos);
+                line->str[cursorPos.x] = ' ';
+            }
+            FloatingCharList_eraseAll(&fchars, cursorPos);
+        } else if (cursorPos.x > 0) {
+            cursorPos.x--;
+        }
+    }
+    if (IsKeyPressed(KEY_TAB)) {
+        const int tabSize = 8;
+        const int afterTabSize = cursorPos.x % tabSize;
+        cursorPos.x += tabSize - afterTabSize;
+        if (!fitsInRect(cursorPos.x, padding, container))
+            cursorPos.x = line->length-1;
+    }
+    if (isCapsLockActive()) keyResetFrames(KEY_CAPS_LOCK);
+    if (IsKeyDown(KEY_LEFT_SHIFT)) keyResetFrames(KEY_LEFT_SHIFT);
+    if (IsKeyDown(KEY_RIGHT_SHIFT)) keyResetFrames(KEY_RIGHT_SHIFT);
 }
 
 void updatePositions() {
@@ -331,37 +330,37 @@ void drawKeyboard() {
     frames = Clamp(frames, 0, keyboardFrames);
     keyboard.y = Lerp(screenHeight-keyboard.height, screenHeight, frames/(float)keyboardFrames);
 
-    if (!hideKeyboard || frames < keyboardFrames) {
-        DrawRectangle(0, keyboard.y, screenWidth, keyboard.height, GUI_COLOR(BASE_COLOR_DISABLED));
-        const int nRows = layouts[layout].nRows;
-        int longestRowSize = 0;
-        for (int i = 0; i < nRows; i++) {
-            if (layouts[layout].rows[i] > longestRowSize)
-                longestRowSize = layouts[layout].rows[i];
+    if (hideKeyboard && frames >= keyboardFrames) return;
+
+    DrawRectangle(0, keyboard.y, screenWidth, keyboard.height, GUI_COLOR(BASE_COLOR_DISABLED));
+    const int nRows = layouts[layout].nRows;
+    int longestRowSize = 0;
+    for (int i = 0; i < nRows; i++) {
+        if (layouts[layout].rows[i] > longestRowSize)
+            longestRowSize = layouts[layout].rows[i];
+    }
+    for (int row = 0, i = 0; row < nRows; row++) {
+        const int keyFontSize = keyRadius*0.67;
+        float centerRelative[layouts[layout].rows[row]] = {};
+        float rowWidth = 0;
+        for (int column = 0; column < layouts[layout].rows[row]; column++) {
+            int idx = i + column;
+            const float keyWidth = keyRadius*2 + keyExtraWidth(layouts[layout].keys[idx].normal, keyFontSize);
+            centerRelative[column] = rowWidth + padding + keyWidth/2.0;
+            rowWidth = rowWidth + padding + keyWidth;
         }
-        for (int row = 0, i = 0; row < nRows; row++) {
-            const int keyFontSize = keyRadius*0.67;
-            float centerRelative[layouts[layout].rows[row]] = {};
-            float rowWidth = 0;
-            for (int column = 0; column < layouts[layout].rows[row]; column++) {
-                int idx = i + column;
-                const float keyWidth = keyRadius*2 + keyExtraWidth(layouts[layout].keys[idx].normal, keyFontSize);
-                centerRelative[column] = rowWidth + padding + keyWidth/2.0;
-                rowWidth = rowWidth + padding + keyWidth;
-            }
-            float rowBaseX = (screenWidth - rowWidth) / 2.0;
+        float rowBaseX = (screenWidth - rowWidth) / 2.0;
 
-            for (int column = 0; column < layouts[layout].rows[row]; column++, i++) {
-                Vector2 center = (Vector2) {
-                    rowBaseX + centerRelative[column],
-                    keyboard.y + padding + keyRadius + row * (keyRadius*2 + padding)
-                };
+        for (int column = 0; column < layouts[layout].rows[row]; column++, i++) {
+            Vector2 center = (Vector2) {
+                rowBaseX + centerRelative[column],
+                keyboard.y + padding + keyRadius + row * (keyRadius*2 + padding)
+            };
 
-                const unsigned char transparency = Lerp(0, 255, layouts[layout].frames[i]/(float)keyAnimationFrames);
-                drawKey(i, center, keyFontSize, transparency);
+            const unsigned char transparency = Lerp(0, 255, layouts[layout].frames[i]/(float)keyAnimationFrames);
+            drawKey(i, center, keyFontSize, transparency);
 
-                layouts[layout].frames[i] -= layouts[layout].frames[i] == 0 ? 0 : 1;
-            }
+            layouts[layout].frames[i] -= layouts[layout].frames[i] == 0 ? 0 : 1;
         }
     }
 }
