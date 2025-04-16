@@ -2,10 +2,9 @@
 #include <ctype.h>
 #include <GLFW/glfw3.h>
 #include <stdbool.h>
-#include <stdio.h>
 
 #define MAX_KEYS 128
-#define BIGGEST_KEY KEY_KB_MENU
+#define LARGEST_KEY KEY_KB_MENU
 
 typedef struct {
     int normal;
@@ -47,8 +46,8 @@ KeyboardLayout layouts[] = {
     },
 };
 
-int normalLookupTable[sizeof(layouts)/sizeof(KeyboardLayout)][BIGGEST_KEY+1] = {}; // size of the largest key + 1, KEY_KP_EQUAL
-char shiftLookupTable[sizeof(layouts)/sizeof(KeyboardLayout)][BIGGEST_KEY+1] = {}; // size of the largest key + 1, KEY_KP_EQUAL
+int normalLookupTable[sizeof(layouts)/sizeof(KeyboardLayout)][LARGEST_KEY+1] = {};
+char shiftLookupTable[sizeof(layouts)/sizeof(KeyboardLayout)][LARGEST_KEY+1] = {};
 
 const int keyAnimationFrames = 10;
 
@@ -79,7 +78,8 @@ int getKeysIndex(int key) {
         filled = true;
     }
 
-    if (key > BIGGEST_KEY) return -1;
+    if (key > LARGEST_KEY) return -1;
+    if (key == layouts[layout].keys[0].normal) return 0;
 
     const int normal = normalLookupTable[layout][key];
     return normal ? normal : -1;
@@ -96,9 +96,11 @@ int getKeyNormal(int c) {
         filled = true;
     }
 
-    int i = getKeysIndex(c);
+    if (c == layouts[layout].keys[0].shift) return layouts[layout].keys[0].normal;
 
+    int i = getKeysIndex(c);
     if (i != -1) return c;
+
     i = shiftLookupTable[layout][c];
 
     if (i == 0) return -1;
