@@ -71,6 +71,7 @@ void fillShiftLookupTable() {
     }
 }
 
+// TODO: fill table on another thread when the program starts
 int getKeysIndex(int key) {
     static bool filled = false;
     if (!filled) {

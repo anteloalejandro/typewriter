@@ -3,6 +3,7 @@
 #include <ctype.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <time.h>
 #include "headers/shared.h"
 #include "src/floatingchars.c"
@@ -176,20 +177,14 @@ void updatePositions() {
     screenWidth = GetScreenWidth();
     screenHeight = GetScreenHeight();
 
-    Vector2 moveDelta = Vector2Multiply(GetMouseWheelMoveV(), (Vector2) {scrollSpeed, scrollSpeed});
-    if (cursor.x + moveDelta.x >= padding && cursor.x + moveDelta.x <= screenWidth - padding - data.charWidth)
-        cursor.x += moveDelta.x;
-    if (cursor.y + moveDelta.y >= padding && cursor.y + moveDelta.y <= screenHeight - padding - data.fontSize)
-        cursor.y += moveDelta.y;
-
     static float mousePressedMove = 0;
     static bool carretPressed = false;
     if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && (carretPressed || CheckCollisionPointRec(GetMousePosition(), TRI_TO_RECT(carret)))) {
         carretPressed = true;
         mousePressedMove += GetMouseDelta().x; // multiply by charWidth to match mouse
-        if (mousePressedMove > data.charWidth || -mousePressedMove > data.charWidth) {
-            const int cursorMove = mousePressedMove / data.charWidth;
-            mousePressedMove -= cursorMove * data.charWidth;
+        if (fabs(mousePressedMove) > data.charWidth + data.spacing) {
+            const int cursorMove = mousePressedMove / (data.charWidth + data.spacing);
+            mousePressedMove -= cursorMove * (data.charWidth + data.spacing);
             int newCursorPos_x = cursorPos.x - cursorMove;
             if (newCursorPos_x <= 0) {
                 newCursorPos_x = 0;
@@ -203,6 +198,28 @@ void updatePositions() {
     } else {
         carretPressed = false;
         mousePressedMove = 0;
+    }
+
+    static float mouseScroll = 0;
+    if (GetMouseWheelMoveV().y) {
+        printf("%.2f\n", mouseScroll);
+        mouseScroll += GetMouseWheelMoveV().y * scrollSpeed;
+        if (fabs(mouseScroll) > data.fontSize + data.lineSpacing) {
+            const int cursorMove = mouseScroll / (data.fontSize + data.lineSpacing);
+            mouseScroll -= cursorMove * (data.fontSize + data.lineSpacing);
+            int newCursorPos_y = cursorPos.y - cursorMove;
+            if (newCursorPos_y <= 0) newCursorPos_y = 0;
+            else if (newCursorPos_y >= rows) newCursorPos_y = rows-1;
+            cursorPos.y = newCursorPos_y;
+        }
+    }
+
+    if (IsMouseButtonDown(MOUSE_BUTTON_MIDDLE)) {
+        const Vector2 mouseDelta = GetMouseDelta();
+        if (cursor.x + mouseDelta.x >= padding && cursor.x + mouseDelta.x <= screenWidth - padding - data.charWidth)
+            cursor.x += mouseDelta.x;
+        if (cursor.y + mouseDelta.y >= padding && cursor.y + mouseDelta.y <= screenHeight - padding - data.fontSize)
+            cursor.y += mouseDelta.y;
     }
 
     if (prevScreenWidth != screenWidth || prevScreenHeight != screenHeight) {
