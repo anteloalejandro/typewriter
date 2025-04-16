@@ -1,6 +1,7 @@
 #include "raylib/include/raylib.h"
 #include "raylib/include/raymath.h"
 #include <ctype.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -107,6 +108,11 @@ void init() {
     carret = (Triangle) {
         .x = 0, .y = 0,
         {0, 0}, {0, data.fontSize}, {data.charWidth, data.fontSize/(float)2}
+    };
+
+    keyboard = (Rectangle) {
+        .width = screenWidth,
+        .y = INFINITY
     };
 
     lines = realloc(lines, sizeof(Str)*rows);
@@ -233,9 +239,7 @@ void updatePositions() {
     carret.y = cursor.y;
 
     keyboard.height = (keyRadius*2 + padding) * layouts[layout].nRows + padding,
-    keyboard.width = screenWidth;
     keyboard.x = (screenWidth - keyboard.width)/2.0;
-    keyboard.y = screenHeight - keyboard.height;
 }
 
 void drawPage() {
@@ -339,15 +343,13 @@ void drawKey(int keyIdx, Vector2 center, int fontSize, unsigned char transparenc
 
 // TODO: calculate ahead of time the length of each row to allow long keys at the end
 void drawKeyboard() {
-    // hide/show keyboard
-    static int frames = 0;
-    const int keyboardFrames = 5;
-    if (hideKeyboard) frames++;
-    else frames--;
-    frames = Clamp(frames, 0, keyboardFrames);
-    keyboard.y = Lerp(screenHeight-keyboard.height, screenHeight, frames/(float)keyboardFrames);
+    if (keyboard.y == INFINITY) keyboard.y = hideKeyboard ? screenHeight : screenHeight - keyboard.height;
 
-    if (hideKeyboard && frames >= keyboardFrames) return;
+    // hide/show keyboard
+    if (hideKeyboard) keyboard.y = Lerp(keyboard.y, screenHeight, 0.05);
+    else keyboard.y = Lerp(keyboard.y, screenHeight-keyboard.height, 0.05);
+
+    if (hideKeyboard && keyboard.y+0.1 >= screenHeight) return;
 
     DrawRectangle(0, keyboard.y, screenWidth, keyboard.height, GUI_COLOR(BASE_COLOR_DISABLED));
     const int nRows = layouts[layout].nRows;
@@ -389,15 +391,14 @@ float getAndIncrement(float *n, float increment) {
     return copy;
 }
 void drawSettings() {
-    const int settingsWidth = 220;
-    const int finalSettingsX = screenWidth-settingsWidth;
-    const int settingsFrames = 10;
-    static int frames = 0;
-    if (showSettings) frames++;
-    else frames--;
-    frames = Clamp(frames, 0, settingsFrames);
+    static const int settingsWidth = 220;
+    static float settingsX = INFINITY;
+    if (settingsX == INFINITY) settingsX = screenWidth;
 
-    const int settingsX = Lerp(screenWidth, finalSettingsX, frames/(float)settingsFrames);
+    if (showSettings) settingsX = Lerp(settingsX, screenWidth-settingsWidth, 0.05);
+    else settingsX = Lerp(settingsX, screenWidth, 0.05);
+
+    
     float y = padding;
 
     DrawRectangle(settingsX, 0, settingsWidth, screenHeight, GUI_COLOR(BORDER_COLOR_DISABLED));
@@ -407,6 +408,7 @@ void drawSettings() {
         &showSettings
     );
 
+    if (!showSettings && settingsX+0.1 >= screenWidth) return;
     DrawText("General Settings", settingsX+padding, getAndIncrement(&y, 20+padding), 20, GUI_COLOR(BACKGROUND_COLOR));
     GuiToggle(
         (Rectangle) {settingsX+padding, getAndIncrement(&y, 30+padding), settingsWidth-padding*2, 30},
