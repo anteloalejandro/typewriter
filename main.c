@@ -46,6 +46,7 @@ struct ThemeItem {
 
 int screenWidth = 1200;
 int screenHeight = 800;
+float settingsX = INFINITY;
 
 bool showSettings = false;
 bool emulateLayout = true;
@@ -231,6 +232,8 @@ void updatePositions() {
     if (prevScreenWidth != screenWidth || prevScreenHeight != screenHeight) {
         cursor.x += (screenWidth - prevScreenWidth)/2.0;
         cursor.y += (screenHeight - prevScreenHeight)/2.0;
+        keyboard.y += (screenHeight - prevScreenHeight);
+        settingsX += (screenWidth - prevScreenWidth);
     }
 
     container.x = (cursor.x - padding) - (textSize(cursorPos.x, HORIZONTAL));
@@ -392,7 +395,6 @@ float getAndIncrement(float *n, float increment) {
 }
 void drawSettings() {
     static const int settingsWidth = 220;
-    static float settingsX = INFINITY;
     if (settingsX == INFINITY) settingsX = screenWidth;
 
     if (showSettings) settingsX = Lerp(settingsX, screenWidth-settingsWidth, 0.05);
