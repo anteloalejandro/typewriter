@@ -138,9 +138,9 @@ int getKeyCode(int keyNormal) {
     return layouts[layout].keys[i].code;
 }
 
-void keyResetFrames(int key) {
-    key = getKeyUnshift(key);
-    int i = getKeyIndex(key);
+void keyResetFrames(int keyCode) {
+    const int key = getKeyNormal(keyCode);
+    const int i = getKeyIndex(key);
     if (i == -1) return;
     layouts[layout].frames[i] = keyAnimationFrames;
 }
