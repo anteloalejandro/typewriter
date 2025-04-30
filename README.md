@@ -19,7 +19,7 @@ sudo apt install libglfw3-dev
 
 #### Arch
 
-```
+```bash
 sudo pacman -S glfw
 ```
 
